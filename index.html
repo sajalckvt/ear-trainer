@@ -24,7 +24,7 @@ body{font-family:'Outfit',sans-serif;background:#090916;color:#e0e0f0;min-height
 .inst-row{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
 .ib{padding:6px 12px;border-radius:10px;border:1.5px solid #1e1e38;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#555;font-family:inherit;transition:all .15s}
 .ib.on{border-color:#6366f1;background:#6366f112;color:#a5b4fc}
-.score-row{display:flex;gap:12px;justify-content:center;margin-bottom:12px;align-items:center}
+.score-row{display:flex;gap:12px;justify-content:center;margin-bottom:12px;align-items:center;flex-wrap:wrap}
 .sc{text-align:center}.sc .v{font-size:17px;font-weight:700;font-family:'JetBrains Mono',monospace}.sc .l{font-size:8px;color:#444;text-transform:uppercase;letter-spacing:1px}
 .rbtn{padding:4px 10px;border-radius:6px;border:1px solid #2a2a3e;background:transparent;color:#555;font-size:10px;cursor:pointer;font-family:inherit}
 .rbtn:hover{border-color:#ef4444;color:#ef4444}
@@ -128,7 +128,9 @@ body{font-family:'Outfit',sans-serif;background:#090916;color:#e0e0f0;min-height
 <div class="sc"><div class="v" id="sv-a" style="color:#3b82f6">0%</div><div class="l">Acc</div></div>
 <div class="sc"><div class="v" id="sv-k" style="color:#f59e0b">0</div><div class="l">Streak</div></div>
 <div class="sc"><div class="v" id="sv-b" style="color:#ec4899">0</div><div class="l">Best</div></div>
-<button class="rbtn" onclick="S.c=0;S.t=0;S.sk=0;S.bst=0;render()">Reset</button>
+<div class="sc"><div class="v" id="el-timer" style="color:#14b8a6">0s</div><div class="l">This week</div></div>
+<button class="rbtn" onclick="S.c=0;S.t=0;S.sk=0;S.bst=0;render()">Reset score</button>
+<button class="rbtn" onclick="resetTimer()">Reset timer</button>
 </div>
 <div class="play-area" id="el-play"></div>
 <div class="ag" id="el-ans"></div>
@@ -224,7 +226,82 @@ var GS=[{n:'e',m:64,g:1},{n:'B',m:59,g:1.4},{n:'G',m:55,g:1.9},{n:'D',m:50,g:2.2
 var S={phase:1,lv:0,dir:'asc',inst:'acoustic_grand_piano',key:'C',cad:false,q:null,fb:null,sa:false,sr:false,c:0,t:0,sk:0,bst:0};
 var ctx,BC={},ivHist=[];
 
+// Mobile audio unlock — create and resume on first tap
+var audioUnlocked=false;
+function unlockAudio(){
+  if(audioUnlocked)return;
+  if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state==='suspended')ctx.resume();
+  // Play a silent buffer to fully unlock on iOS
+  var b=ctx.createBuffer(1,1,22050);
+  var s=ctx.createBufferSource();
+  s.buffer=b;s.connect(ctx.destination);s.start(0);
+  audioUnlocked=true;
+}
+document.addEventListener('touchstart',unlockAudio,{once:false});
+document.addEventListener('touchend',unlockAudio,{once:false});
+document.addEventListener('click',unlockAudio,{once:false});
+
 function ac(){if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();return ctx;}
+
+// ─── ACTIVE TRAINING TIMER ─────────────────
+var timer={secs:0,active:false,interval:null,lastAction:0,weekKey:''};
+
+function getWeekKey(){
+  var d=new Date();var jan1=new Date(d.getFullYear(),0,1);
+  var wk=Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
+  return d.getFullYear()+'_w'+wk;
+}
+
+function loadTimer(){
+  timer.weekKey=getWeekKey();
+  try{
+    var saved=JSON.parse(localStorage.getItem('et_timer')||'{}');
+    if(saved.week===timer.weekKey){timer.secs=saved.secs||0;}
+    else{timer.secs=0;} // new week, reset
+  }catch(e){timer.secs=0;}
+}
+
+function saveTimer(){
+  try{localStorage.setItem('et_timer',JSON.stringify({week:timer.weekKey,secs:timer.secs}));}catch(e){}
+}
+
+function resetTimer(){timer.secs=0;saveTimer();renderTimer();}
+
+function startTimer(){
+  if(timer.interval)return;
+  timer.active=true;timer.lastAction=Date.now();
+  timer.interval=setInterval(function(){
+    // Only count if user was active in last 30 seconds
+    if(Date.now()-timer.lastAction<30000){
+      timer.secs++;
+      if(timer.secs%5===0)saveTimer(); // save every 5s
+      renderTimer();
+    }
+  },1000);
+}
+
+function userActive(){
+  timer.lastAction=Date.now();
+  if(!timer.interval)startTimer();
+}
+
+function fmtTime(s){
+  var h=Math.floor(s/3600);var m=Math.floor((s%3600)/60);var sec=s%60;
+  if(h>0)return h+'h '+m+'m';
+  if(m>0)return m+'m '+sec+'s';
+  return sec+'s';
+}
+
+function renderTimer(){
+  var el=document.getElementById('el-timer');
+  if(el)el.textContent=fmtTime(timer.secs);
+}
+
+// Track user activity
+document.addEventListener('click',userActive);
+document.addEventListener('touchstart',userActive);
+loadTimer();
 function m2n(m){return NN[((m%12)+12)%12]+(Math.floor(m/12)-1);}
 function m2d(m){return ND[((m%12)+12)%12]+(Math.floor(m/12)-1);}
 
@@ -531,6 +608,6 @@ function initRef(){
   });
 }
 
-initUI();initRef();setPhase(1);
+initUI();initRef();setPhase(1);renderTimer();
 </script>
 </body></html>
