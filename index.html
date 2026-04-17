@@ -224,25 +224,82 @@ var INSTS=[
 var GS=[{n:'e',m:64,g:1},{n:'B',m:59,g:1.4},{n:'G',m:55,g:1.9},{n:'D',m:50,g:2.2},{n:'A',m:45,g:2.6},{n:'E',m:40,g:3}];
 
 var S={phase:1,lv:0,dir:'asc',inst:'acoustic_grand_piano',key:'C',cad:false,q:null,fb:null,sa:false,sr:false,c:0,t:0,sk:0,bst:0};
-var ctx,BC={},ivHist=[];
+var ctx=null,BC={},ivHist=[];
 
-// Mobile audio unlock — create and resume on first tap
-var audioUnlocked=false;
-function unlockAudio(){
-  if(audioUnlocked)return;
-  if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();
-  if(ctx.state==='suspended')ctx.resume();
-  // Play a silent buffer to fully unlock on iOS
-  var b=ctx.createBuffer(1,1,22050);
-  var s=ctx.createBufferSource();
-  s.buffer=b;s.connect(ctx.destination);s.start(0);
-  audioUnlocked=true;
+// ─── MOBILE-SAFE AUDIO ENGINE ───────────────
+function ensureCtx(){
+  if(!ctx){
+    var AC=window.AudioContext||window.webkitAudioContext;
+    ctx=new AC();
+  }
+  // Always try to resume — iOS suspends aggressively
+  if(ctx.state==='suspended'){
+    try{ctx.resume();}catch(e){}
+  }
+  return ctx;
 }
-document.addEventListener('touchstart',unlockAudio,{once:false});
-document.addEventListener('touchend',unlockAudio,{once:false});
-document.addEventListener('click',unlockAudio,{once:false});
 
-function ac(){if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();return ctx;}
+// Unlock on ANY user gesture — iOS needs sound played inside gesture
+function initAudioOnGesture(){
+  var a=ensureCtx();
+  try{
+    var osc=a.createOscillator();
+    var g=a.createGain();
+    g.gain.value=0; // silent
+    osc.connect(g).connect(a.destination);
+    osc.start(0);
+    osc.stop(a.currentTime+0.01);
+  }catch(e){}
+}
+['touchstart','touchend','click','keydown'].forEach(function(evt){
+  document.addEventListener(evt,initAudioOnGesture,{passive:true});
+});
+
+// Decode a base64 soundfont note into an AudioBuffer
+function decodeNote(instId,note,cb){
+  var k=instId+'_'+note;
+  if(BC[k]){cb(BC[k]);return;}
+  if(!SF||!SF[instId]||!SF[instId][note]){return;}
+  var a=ensureCtx();
+  var b64=SF[instId][note].split(',')[1];
+  var bin=atob(b64);
+  var buf=new ArrayBuffer(bin.length);
+  var view=new Uint8Array(buf);
+  for(var i=0;i<bin.length;i++)view[i]=bin.charCodeAt(i);
+  // Use copy (.slice) because decodeAudioData detaches the buffer
+  a.decodeAudioData(buf.slice(0),function(decoded){
+    BC[k]=decoded;
+    cb(decoded);
+  },function(err){
+    console.log('Decode error:',note,err);
+  });
+}
+
+// Play a note immediately
+function playBuf(audioBuf){
+  var a=ensureCtx();
+  if(a.state==='suspended'){try{a.resume();}catch(e){}}
+  var src=a.createBufferSource();
+  src.buffer=audioBuf;
+  var g=a.createGain();
+  g.gain.value=2.5;
+  src.connect(g).connect(a.destination);
+  src.start(0);
+}
+
+// Play a soundfont note with optional delay (using setTimeout, not audio scheduling)
+function pn(instId,note,dl){
+  dl=dl||0;
+  if(dl>0){
+    // Pre-decode now, play later
+    decodeNote(instId,note,function(buf){
+      setTimeout(function(){playBuf(buf);},dl*1000);
+    });
+  } else {
+    decodeNote(instId,note,function(buf){playBuf(buf);});
+  }
+}
+function pm(m,dl){pn(S.inst,m2n(m),dl);}
 
 // ─── ACTIVE TRAINING TIMER ─────────────────
 var timer={secs:0,active:false,interval:null,lastAction:0,weekKey:''};
@@ -304,17 +361,6 @@ document.addEventListener('touchstart',userActive);
 loadTimer();
 function m2n(m){return NN[((m%12)+12)%12]+(Math.floor(m/12)-1);}
 function m2d(m){return ND[((m%12)+12)%12]+(Math.floor(m/12)-1);}
-
-function pn(instId,note,dl){
-  dl=dl||0;var k=instId+'_'+note;var a=ac();
-  function go(){if(!BC[k])return;var s=a.createBufferSource();s.buffer=BC[k];var g=a.createGain();g.gain.value=2.5;s.connect(g).connect(a.destination);s.start(a.currentTime+dl);}
-  if(BC[k]){go();return;}
-  if(!SF||!SF[instId]||!SF[instId][note])return;
-  var b64=SF[instId][note].split(',')[1];var bin=atob(b64);var bytes=new Uint8Array(bin.length);
-  for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-  a.decodeAudioData(bytes.buffer).then(function(buf){BC[k]=buf;go();});
-}
-function pm(m,dl){pn(S.inst,m2n(m),dl);}
 
 // Simple cadence: single notes I-IV-V-I
 function playCad(rootMidi,cb){
