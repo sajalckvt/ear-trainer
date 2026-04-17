@@ -360,12 +360,11 @@ function newQ(){
   if(S.phase===1){
     var lv=IV_LEVELS[S.lv];
     var st=pick(lv.iv);
-    // Expert cross-octave: randomize root within sample range
+    // Expert cross-octave: same root as always, target can go beyond octave
     if(lv.cross){
-      var lo=SAMPLE_LO,hi=SAMPLE_HI-st;
-      if(S.dir!=='asc'){lo=SAMPLE_LO+st;hi=SAMPLE_HI;}
-      if(lo>hi)lo=hi;
-      rm=lo+Math.floor(Math.random()*(hi-lo+1));
+      // Root stays on selected key, only clamp if target out of sample range
+      if(S.dir==='asc'){if(rm+st>SAMPLE_HI)rm=SAMPLE_HI-st;}
+      else{if(rm-st<SAMPLE_LO)rm=SAMPLE_LO+st;}
     } else {
       if(S.dir==='asc'){if(rm+st>SAMPLE_HI)rm=SAMPLE_HI-st;}
       else{if(rm-st<SAMPLE_LO)rm=SAMPLE_LO+st;}
