@@ -1,22 +1,22 @@
 import { NN } from '../data/constants';
 import { pm, type InstrumentId } from '../audio/engine';
-import { MELODIES, type Melody } from '../data/melodies';
+import { MELODIES, MELODY_IDS, type Melody } from '../data/melodies';
 import type { Exercise, AnswerOption, Question } from './types';
 
 export interface MelodyPayload {
   melody: Melody;
-  blankIndices: number[];  // sorted positions of the blanks
-  answerMidis: number[];   // correct notes + distractors (shuffled)
+  blankIndices: number[];
+  answerMidis: number[];
 }
 
 const MELODY_LEVELS = [
-  { n: 'Easy',   melodyIds: ['twinkle'],                       blanks: 1, extra: 5 },
-  { n: 'Medium', melodyIds: ['twinkle', 'ode_to_joy'],          blanks: 2, extra: 3 },
-  { n: 'Hard',   melodyIds: ['twinkle', 'ode_to_joy', 'mary'], blanks: 3, extra: 2 },
-  { n: 'Expert', melodyIds: ['twinkle', 'ode_to_joy', 'mary'], blanks: 5, extra: 0 },
+  { n: 'Easy',   ids: MELODY_IDS.easy,   blanks: 1, extra: 5 },
+  { n: 'Medium', ids: MELODY_IDS.medium, blanks: 2, extra: 3 },
+  { n: 'Hard',   ids: MELODY_IDS.hard,   blanks: 3, extra: 2 },
+  { n: 'Expert', ids: MELODY_IDS.hard,   blanks: 5, extra: 0 },
 ];
 
-/** Pick `count` indices spread across [1 .. n-2], not repeating */
+/** Pick `count` blank positions spread across [1 .. n-2] */
 function spreadBlanks(n: number, count: number): number[] {
   const result: number[] = [];
   for (let i = 0; i < count; i++) {
@@ -24,8 +24,8 @@ function spreadBlanks(n: number, count: number): number[] {
     const hi = Math.min(n - 2, Math.floor(((i + 1) / count) * n) - 1);
     const range = Math.max(0, hi - lo);
     let idx = lo + Math.floor(Math.random() * (range + 1));
-    // avoid collisions
-    while (result.includes(idx) && range > 0) idx = lo + Math.floor(Math.random() * (range + 1));
+    let tries = 0;
+    while (result.includes(idx) && tries++ < 10) idx = lo + Math.floor(Math.random() * (range + 1));
     result.push(idx);
   }
   return result.sort((a, b) => a - b);
@@ -39,23 +39,24 @@ export const melodyExercise: Exercise<MelodyPayload> = {
 
   generate({ levelIndex }) {
     const lv = MELODY_LEVELS[levelIndex];
-    const pool = MELODIES.filter((m) => lv.melodyIds.includes(m.id));
+    const pool = MELODIES.filter(m => lv.ids.includes(m.id));
     const melody = pool[Math.floor(Math.random() * pool.length)];
     const blankIndices = spreadBlanks(melody.notes.length, lv.blanks);
+    const correctMidis = blankIndices.map(i => melody.notes[i].midi);
 
-    const correctMidis = blankIndices.map((i) => melody.notes[i].midi);
+    // Distractors: other notes from the melody (contextually plausible)
+    const uniqueMidis = [...new Set(melody.notes.map(n => n.midi))];
+    const distractors = uniqueMidis
+      .filter(m => !correctMidis.includes(m))
+      .sort(() => Math.random() - 0.5)
+      .slice(0, lv.extra);
 
-    // Distractors: notes that appear in the melody but are NOT correct notes for any blank
-    const melodyMidis = [...new Set(melody.notes.map((n) => n.midi))];
-    const distractorPool = melodyMidis
-      .filter((m) => !correctMidis.includes(m))
-      .sort(() => Math.random() - 0.5);
-    const distractors = distractorPool.slice(0, lv.extra);
-    // Pad with semitone neighbours if needed
+    // Pad with semitone neighbours if not enough unique melody notes
     let adj = 1;
     while (distractors.length < lv.extra) {
-      const cand = correctMidis[0] + adj;
-      if (!distractors.includes(cand) && !correctMidis.includes(cand) && cand >= 57 && cand <= 79) distractors.push(cand);
+      const cand = correctMidis[0] + (distractors.length % 2 === 0 ? adj : -adj);
+      if (!distractors.includes(cand) && !correctMidis.includes(cand) && cand >= 57 && cand <= 79)
+        distractors.push(cand);
       adj++;
       if (adj > 12) break;
     }
@@ -64,14 +65,13 @@ export const melodyExercise: Exercise<MelodyPayload> = {
 
     return {
       root: melody.notes[0].midi,
-      notes: melody.notes.map((n) => n.midi),
-      displayLabel: `🎵 ${melody.title}`,
+      notes: melody.notes.map(n => n.midi),
+      displayLabel: `🎵 ${melody.title} — ${melody.artist}`,
       payload: { melody, blankIndices, answerMidis },
       pickId: `${melody.id}_${blankIndices.join('_')}`,
     };
   },
 
-  /** Play melody with gaps at blank positions. */
   play(q, instId: InstrumentId) {
     const { melody, blankIndices } = q.payload as MelodyPayload;
     const beatSec = 60 / melody.bpm;
@@ -82,9 +82,7 @@ export const melodyExercise: Exercise<MelodyPayload> = {
     });
   },
 
-
-
-  answers() { return []; },  // MelodyBoard handles its own answer UI
+  answers() { return []; },
 
   getQuestionAnswers(q: Question & { payload: MelodyPayload }): AnswerOption[] {
     return (q.payload as MelodyPayload).answerMidis.map((midi, i) => ({
@@ -100,9 +98,9 @@ export const melodyExercise: Exercise<MelodyPayload> = {
 };
 
 export function playMelodyFull(
-  melody: import('../data/melodies').Melody,
+  melody: Melody,
   assignments: Record<number, number | null>,
-  instId: import('../audio/engine').InstrumentId,
+  instId: InstrumentId,
 ) {
   const beatSec = 60 / melody.bpm;
   let t = 0;
