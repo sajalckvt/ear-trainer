@@ -342,3 +342,134 @@ body {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff;
 }
+
+/* ── Melody Board ────────────────────────────────────────────────────────── */
+.mb-wrap {
+  background: #0f0f22;
+  border: 1px solid #1a1a30;
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  margin-bottom: 12px;
+}
+
+.mb-title {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px;
+}
+.mb-song {
+  font-size: 13px; font-weight: 700; color: #c4b5fd;
+}
+.mb-hint {
+  font-size: 10px; color: #555;
+}
+
+.mb-scroll-wrap {
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  margin-bottom: 12px; padding-bottom: 4px;
+}
+.mb-notes {
+  display: flex; gap: 4px;
+  /* wide enough to not wrap */
+  width: max-content;
+}
+
+/* Individual note box */
+.mb-note {
+  width: 40px; height: 44px;
+  border-radius: 8px; border: 1.5px solid #1e1e38;
+  font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .15s; padding: 0;
+}
+
+/* Revealed note: shown, colored, clickable */
+.mb-note.revealed {
+  background: color-mix(in srgb, var(--nc) 18%, #0f0f22);
+  border-color: color-mix(in srgb, var(--nc) 40%, transparent);
+  color: var(--nc);
+}
+.mb-note.revealed:hover {
+  background: color-mix(in srgb, var(--nc) 28%, #0f0f22);
+  transform: translateY(-2px);
+}
+
+/* Blank: no note, dashed border */
+.mb-note.blank {
+  background: #0d0d1e;
+  border: 1.5px dashed #2a2a3e;
+  color: #444;
+  font-size: 14px;
+}
+.mb-note.blank:hover:not(:disabled) {
+  border-color: #6366f1; color: #6366f1;
+}
+
+/* Blank selected as target */
+.mb-note.blank.target {
+  border-color: #6366f1; border-style: solid;
+  color: #6366f1; background: #6366f110;
+  animation: mb-pulse 0.9s ease-in-out infinite;
+}
+@keyframes mb-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 #6366f140; }
+  50%       { box-shadow: 0 0 0 4px #6366f120; }
+}
+
+/* Blank with assigned (pending) note */
+.mb-note.blank.assigned {
+  background: color-mix(in srgb, var(--nc) 12%, #0d0d1e);
+  border-color: color-mix(in srgb, var(--nc) 30%, transparent);
+  border-style: solid;
+  color: color-mix(in srgb, var(--nc) 70%, #888);
+}
+
+/* Correct (locked) */
+.mb-note.blank.correct {
+  background: #22c55e18; border-color: #22c55e55; border-style: solid;
+  color: #22c55e;
+}
+
+/* Wrong (flash) */
+.mb-note.blank.wrong {
+  background: #ef444418; border-color: #ef444455; border-style: solid;
+  color: #ef4444;
+  animation: mb-shake 0.4s ease;
+}
+@keyframes mb-shake {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-4px); }
+  75%       { transform: translateX(4px); }
+}
+
+/* Answer tile pool */
+.mb-pool {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 12px;
+}
+
+.mb-tile {
+  min-width: 52px; height: 44px;
+  border-radius: 10px; border: 1.5px solid var(--nc);
+  background: color-mix(in srgb, var(--nc) 12%, #0d0d1e);
+  color: var(--nc);
+  font-size: 13px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  cursor: pointer; transition: all .15s; padding: 0 10px;
+}
+.mb-tile:hover {
+  background: color-mix(in srgb, var(--nc) 22%, #0d0d1e);
+}
+.mb-tile.picked {
+  background: var(--nc);
+  color: #fff;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--nc) 50%, transparent);
+  transform: translateY(-2px);
+}
+
+/* Actions */
+.mb-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+
+.mb-done {
+  text-align: center; font-size: 13px; font-weight: 700;
+  color: #22c55e; margin-top: 8px;
+}

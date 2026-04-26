@@ -12,6 +12,7 @@ import { AnswerGrid } from '../components/AnswerGrid';
 import { Piano } from '../components/Piano';
 import { Fretboard } from '../components/Fretboard';
 import { FeedbackSheet } from '../components/FeedbackSheet';
+import { MelodyBoard } from '../components/MelodyBoard';
 
 interface TrainPageProps {
   visible: boolean;
@@ -126,40 +127,60 @@ export function TrainPage(props: TrainPageProps) {
         onResetScore={onResetScore} onResetTimer={onResetTimer}
       />
 
-      <PlayArea
-        hasQuestion={!!question}
-        rootMidi={question?.root ?? null}
-        feedback={feedback ? { ok: feedback.ok } : null}
-        correctLabel={quizPhase === 'answered' ? correctLabel : null}
-        feedbackInfo={quizPhase === 'answered' ? feedbackInfo : null}
-        onStart={onStart}
-        onReplay={onReplay}
-        onNext={handleNext}
-      />
+      {activeExercise.id === 'melody' ? (
+        /* ── Melody board replaces standard Play/Grid flow ── */
+        question ? (
+          <MelodyBoard
+            key={String(question.pickId)}
+            question={question as Parameters<typeof MelodyBoard>[0]['question']}
+            instrument={instrument}
+            onComplete={(clean) => onGuess(clean ? 'complete_clean' : 'complete_retry')}
+            onNext={handleNext}
+          />
+        ) : (
+          <div className="play-area">
+            <button className="big-btn" onClick={onStart}>▶ Start Training</button>
+          </div>
+        )
+      ) : (
+        /* ── Standard interval / distance / triad / pitch flow ── */
+        <>
+          <PlayArea
+            hasQuestion={!!question}
+            rootMidi={question?.root ?? null}
+            feedback={feedback ? { ok: feedback.ok } : null}
+            correctLabel={quizPhase === 'answered' ? correctLabel : null}
+            feedbackInfo={quizPhase === 'answered' ? feedbackInfo : null}
+            onStart={onStart}
+            onReplay={onReplay}
+            onNext={handleNext}
+          />
 
-      <AnswerGrid
-        answers={answers}
-        correctId={quizPhase === 'answered' ? correctId : null}
-        guessedId={feedback?.guess ?? null}
-        locked={quizPhase === 'answered'}
-        onGuess={onGuess}
-      />
+          <AnswerGrid
+            answers={answers}
+            correctId={quizPhase === 'answered' ? correctId : null}
+            guessedId={feedback?.guess ?? null}
+            locked={quizPhase === 'answered'}
+            onGuess={onGuess}
+          />
 
-      <Piano highlights={highlights} headerLabel={pianoLabel} headerColor={pianoLabelColor} />
-      <Fretboard highlights={highlights} />
-      <Roadmap activeId={activeExercise.id} />
+          <Piano highlights={highlights} headerLabel={pianoLabel} headerColor={pianoLabelColor} />
+          <Fretboard highlights={highlights} />
 
-      {/* Bottom sheet — auto-shows, dismissible */}
-      {sheetOpen && feedbackInfo && (
-        <FeedbackSheet
-          quizPhase={quizPhase}
-          correctInfo={feedbackInfo}
-          hint={hint}
-          instrument={instrument}
-          onNext={handleNext}
-          onDismiss={() => setSheetDismissed(true)}
-        />
+          {sheetOpen && feedbackInfo && (
+            <FeedbackSheet
+              quizPhase={quizPhase}
+              correctInfo={feedbackInfo}
+              hint={hint}
+              instrument={instrument}
+              onNext={handleNext}
+              onDismiss={() => setSheetDismissed(true)}
+            />
+          )}
+        </>
       )}
+
+      <Roadmap activeId={activeExercise.id} />
     </div>
   );
 }
