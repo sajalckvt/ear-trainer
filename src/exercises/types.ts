@@ -4,6 +4,8 @@ export interface Question {
   notes: number[];
   root: number;
   payload: unknown;
+  /** Optional label shown in PlayArea instead of "Root: X" */
+  displayLabel?: string;
 }
 
 export interface AnswerOption {
@@ -19,11 +21,9 @@ export interface FeedbackInfo {
   color: string;
   reference?: string;
   altReference?: string;
-  /** Short-circuit demo — plays a canonical example of this answer when the sheet opens */
   demoPlay?: (instId: InstrumentId) => void;
 }
 
-/** Three-state result of answering */
 export type AnswerResult = 'correct' | 'close' | 'wrong';
 
 export interface Exercise<TPayload = unknown> {
@@ -40,17 +40,18 @@ export interface Exercise<TPayload = unknown> {
   }): Question & { payload: TPayload; pickId: string | number };
 
   play(q: Question & { payload: TPayload }, instId: InstrumentId): void;
+
+  /** Static answer set for the level (used by most exercises). */
   answers(levelIndex: number): AnswerOption[];
-  isCorrect(q: Question & { payload: TPayload }, guess: string | number): boolean;
 
   /**
-   * Close miss = "almost right" — triggers hint + retry instead of full reveal.
-   * Default: false (never close, always fully reveal).
+   * Question-specific answers — overrides answers() when defined.
+   * Used by melody exercise where distractors depend on the specific question.
    */
+  getQuestionAnswers?(q: Question & { payload: TPayload }): AnswerOption[];
+
+  isCorrect(q: Question & { payload: TPayload }, guess: string | number): boolean;
   isClose?(q: Question & { payload: TPayload }, guess: string | number): boolean;
-
-  /** Hint shown after a close miss — must NOT name the correct answer. */
   getHint?(correctId: string | number, guessId: string | number): string;
-
   feedback(answerId: string | number): FeedbackInfo;
 }

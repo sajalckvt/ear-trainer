@@ -68,7 +68,9 @@ export function TrainPage(props: TrainPageProps) {
   // The correct answer id (available after first guess)
   const correctId = feedback && question ? question.pickId : null;
 
-  const answers = activeExercise.answers(levelIndex);
+  const answers = question
+    ? (activeExercise.getQuestionAnswers?.(question as never) ?? activeExercise.answers(levelIndex))
+    : activeExercise.answers(levelIndex);
 
   const correctLabel = correctId !== null
     ? activeExercise.feedback(correctId).label : null;
@@ -97,7 +99,7 @@ export function TrainPage(props: TrainPageProps) {
     pianoLabel = question.notes.map(m2d).join(' ');
     pianoLabelColor = feedbackInfo?.color ?? '#6366f1';
   } else if (question) {
-    pianoLabel = `Root: ${m2d(question.root)}`;
+    pianoLabel = question.displayLabel ?? `Root: ${m2d(question.root)}`;
   }
 
   // Sheet visible: open when feedback exists and not dismissed
@@ -167,7 +169,9 @@ function Roadmap({ activeId }: { activeId: string }) {
     { id: 'interval', n: 1, label: 'Intervals', color: '#6366f1' },
     { id: 'distance', n: 2, label: 'Distance',  color: '#8b5cf6' },
     { id: 'triad',    n: 3, label: 'Triads',    color: '#c084fc' },
-    { id: null,       n: 4, label: 'Progressions', color: null },
+    { id: 'pitch',    n: 4, label: 'Pitch ID',  color: '#f472b6' },
+    { id: 'melody',   n: 5, label: 'Melodies',  color: '#fb923c' },
+    { id: null,       n: 6, label: 'More soon', color: null },
   ];
   return (
     <div className="roadmap">
