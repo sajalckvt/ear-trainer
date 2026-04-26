@@ -8,21 +8,16 @@ interface DistancePayload {
   noteB: number;
 }
 
-// All semitone values up to 2 octaves
-const DIST_WITHIN_OCT   = [1,2,3,4,5,6,7,8,9,10,11,12];
-const DIST_UP_TO_15     = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-const DIST_UP_TO_18     = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
-const DIST_UP_TO_24     = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24];
-const DIST_OCTAVES_ONLY = [12, 24, 36];
-
+// Mirror Interval levels exactly — same option sets, same difficulty curve
+// "Octave" level: near-octave discrimination (m7 / M7 / P8 / m9 / M9)
 const DIST_LEVELS = [
-  { n: 'Beginner', iv: DIST_WITHIN_OCT,   fixedRoot: 60,  cross: false },
-  { n: 'Easy',     iv: DIST_WITHIN_OCT,   fixedRoot: null, cross: false },
-  { n: 'Medium',   iv: DIST_UP_TO_15,     fixedRoot: null, cross: false },
-  { n: 'Hard',     iv: DIST_UP_TO_18,     fixedRoot: null, cross: false },
-  { n: 'Wide',     iv: DIST_UP_TO_24,     fixedRoot: null, cross: false },
-  { n: 'Octaves',  iv: DIST_OCTAVES_ONLY, fixedRoot: null, cross: true  },
-];
+  { n: 'Beginner', iv: [0, 4, 7, 12] },
+  { n: 'Easy',     iv: [0, 3, 4, 5, 7, 12] },
+  { n: 'Medium',   iv: [0, 2, 3, 4, 5, 6, 7, 9, 12] },
+  { n: 'Hard',     iv: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+  { n: 'Expert',   iv: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] },
+  { n: 'Octave',   iv: [10, 11, 12, 13, 14] }, // near-octave: can you tell EXACT octave from near-misses?
+] as const;
 
 function pickFrom<T>(list: readonly T[], recent: ReadonlyArray<T>): T {
   let avail = list.slice() as T[];
@@ -37,45 +32,45 @@ function randRange(lo: number, hi: number) {
   return lo + Math.floor(Math.random() * (hi - lo + 1));
 }
 
-// Answer grid options — intervals up to 24st + octave labels
-function octavesAnswers(): AnswerOption[] {
-  return [
-    { id: 12, label: '1 Octave',  short: '8va',  color: '#6d28d9', hint: '12st' },
-    { id: 24, label: '2 Octaves', short: '15ma', color: '#7c3aed', hint: '24st' },
-    { id: 36, label: '3 Octaves', short: '22ma', color: '#4c1d95', hint: '36st' },
-  ];
-}
-
-function semitoneLabel(st: number): string {
-  if (IVS[st]) return IVS[st].n;
-  return `${st} semitones`;
-}
-
 export const distanceExercise: Exercise<DistancePayload> = {
   id: 'distance',
-  name: 'Phase 1B: Distance',
+  name: 'Distance',
   levels: DIST_LEVELS,
-  usesDirection: false, // direction is randomised per question
+  usesDirection: false,
 
   generate({ levelIndex, recentPicks }) {
     const lv = DIST_LEVELS[levelIndex];
-    const st = pickFrom(lv.iv, recentPicks as number[]);
+    const st = pickFrom(lv.iv as readonly number[], recentPicks as number[]);
 
-    // Root: fixed C4 on Beginner, otherwise random within a comfortable range
+    // Properly clamp so BOTH notes land within the soundfont range.
+    // Ascending: noteA ∈ [SAMPLE_LO, SAMPLE_HI - st]
+    // Descending: noteA ∈ [SAMPLE_LO + st, SAMPLE_HI]
+    const canAsc  = SAMPLE_HI - st >= SAMPLE_LO;
+    const canDesc = SAMPLE_HI    >= SAMPLE_LO + st;
+
     let noteA: number;
-    if (lv.fixedRoot !== null) {
-      noteA = lv.fixedRoot;
-    } else {
-      // Keep both notes within sample range
-      const lo = SAMPLE_LO;
-      const hi = SAMPLE_HI - st;
-      noteA = hi >= lo ? randRange(lo, hi) : SAMPLE_LO;
-    }
+    let noteB: number;
 
-    // Direction: random (asc or desc), but always keep noteB in sample range
-    let noteB = noteA + st;
-    if (noteB > SAMPLE_HI) { noteB = noteA - st; }
-    if (noteB < SAMPLE_LO) { noteB = noteA + st; }
+    if (canAsc && canDesc) {
+      // Both directions work — pick randomly
+      if (Math.random() < 0.5) {
+        noteA = randRange(SAMPLE_LO, SAMPLE_HI - st);
+        noteB = noteA + st;
+      } else {
+        noteA = randRange(SAMPLE_LO + st, SAMPLE_HI);
+        noteB = noteA - st;
+      }
+    } else if (canAsc) {
+      noteA = randRange(SAMPLE_LO, SAMPLE_HI - st);
+      noteB = noteA + st;
+    } else if (canDesc) {
+      noteA = randRange(SAMPLE_LO + st, SAMPLE_HI);
+      noteB = noteA - st;
+    } else {
+      // st exceeds soundfont range — play the widest available gap
+      noteA = SAMPLE_LO;
+      noteB = SAMPLE_HI;
+    }
 
     return {
       root: Math.min(noteA, noteB),
@@ -93,21 +88,12 @@ export const distanceExercise: Exercise<DistancePayload> = {
 
   answers(levelIndex): AnswerOption[] {
     const lv = DIST_LEVELS[levelIndex];
-    if (lv.n === 'Octaves') return octavesAnswers();
-
-    return lv.iv.map((st) => {
+    return (lv.iv as readonly number[]).map((st) => {
       const iv = IVS[st];
       if (iv) {
         return { id: st, label: iv.n, short: iv.sh, color: iv.co, hint: `${st}st` };
       }
-      // Beyond known intervals (> 14st) — generic label
-      const octave = Math.floor(st / 12);
-      const remainder = st % 12;
-      const remIv = IVS[remainder];
-      const label = octave > 0
-        ? `${octave} oct + ${remIv?.sh ?? remainder + 'st'}`
-        : `${st} semitones`;
-      return { id: st, label, short: `${st}st`, color: '#818cf8', hint: `${st}st` };
+      return { id: st, label: `${st} semitones`, short: `${st}st`, color: '#818cf8', hint: `${st}st` };
     });
   },
 
@@ -119,23 +105,27 @@ export const distanceExercise: Exercise<DistancePayload> = {
     return Math.abs((guess as number) - (q.payload as DistancePayload).semitones) === 1;
   },
 
-  getHint(correctId, guessId) {
-    const diff = (correctId as number) - (guessId as number);
-    if (diff > 0) return `You're close! The gap is slightly wider than you thought.`;
-    return `You're close! The gap is slightly narrower than you thought.`;
+  getHint(_correctId, guessId) {
+    const correct = (_correctId as number);
+    const guess   = (guessId as number);
+    if (correct > guess) return "You're close! The gap is slightly wider than you thought.";
+    return "You're close! The gap is slightly narrower than you thought.";
   },
 
   feedback(answerId) {
     const st = answerId as number;
     const iv = IVS[st];
     return {
-      label: semitoneLabel(st),
+      label: iv?.n ?? `${st} semitones`,
       color: iv?.co ?? '#818cf8',
       reference: iv?.rf,
       altReference: iv?.al,
       demoPlay: (instId: InstrumentId) => {
-        pm(instId, 60, 0);
-        pm(instId, 60 + st, 0.6);
+        // Always demo from a fixed mid-range root so user has a clean reference
+        const root = 65; // F4 — comfortably mid-range, both directions work for st≤14
+        const target = root + st <= SAMPLE_HI ? root + st : root - st;
+        pm(instId, root, 0);
+        pm(instId, target, 0.6);
       },
     };
   },

@@ -36,7 +36,7 @@ function hintKey(correct: number, guess: number) {
 
 export const intervalExercise: Exercise<IntervalPayload> = {
   id: 'interval',
-  name: 'Phase 1A: Intervals',
+  name: 'Intervals',
   levels: IV_LEVELS,
   usesDirection: true,
 

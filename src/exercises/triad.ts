@@ -59,7 +59,7 @@ const CHORD_DEMOS: Record<string, (instId: InstrumentId) => void> = {
 
 export const triadExercise: Exercise<TriadPayload> = {
   id: 'triad',
-  name: 'Phase 2: Triads',
+  name: 'Triads',
   levels: CH_LEVELS,
   usesDirection: false,
 
