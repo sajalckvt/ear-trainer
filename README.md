@@ -2,7 +2,7 @@
 
 Interactive ear training app for intervals and triads. No signup, works offline after the first load, free forever.
 
-Part of the [open-music-education](https://github.com/open-music-education) family.
+Part of the [open-music-education](https://github.com/sajalckvt) family.
 
 ## Features
 
