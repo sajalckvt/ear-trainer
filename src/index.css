@@ -345,68 +345,49 @@ body {
 
 /* ── Melody Board (Piano Roll) ───────────────────────────────────────────── */
 .mb {
-  background: #0f0f1e;
-  border: 1px solid #1a1a2e;
-  border-radius: 14px;
-  padding: 12px 14px 14px;
-  margin-bottom: 12px;
+  background: #0f0f1e; border: 1px solid #1a1a2e;
+  border-radius: 14px; padding: 12px 14px 14px; margin-bottom: 12px;
 }
-
-/* Header */
 .mb-hdr {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
 }
-.mb-song  { font-size: 13px; font-weight: 700; color: #c4b5fd; }
+.mb-song   { font-size: 13px; font-weight: 700; color: #c4b5fd; }
 .mb-artist { font-size: 11px; color: #444; }
-.mb-prog  { font-size: 10px; color: #555; font-family: 'JetBrains Mono', monospace; }
+.mb-prog   { font-size: 10px; color: #555; font-family: 'JetBrains Mono', monospace; }
 
-/* Piano roll outer container */
+/* Roll container */
 .mb-roll-outer {
-  display: flex;
-  border: 1px solid #1a1a30;
-  border-radius: 6px;
-  overflow: hidden;
-  margin-bottom: 12px;
+  display: flex; border: 1px solid #1e1e30; border-radius: 5px;
+  overflow: hidden; margin-bottom: 12px;
 }
 
 /* Piano key column */
 .mb-keys {
-  flex-shrink: 0;
-  width: 38px;
-  background: #12121e;
-  border-right: 1px solid #1e1e30;
-  display: flex;
-  flex-direction: column;
+  flex-shrink: 0; width: 36px; background: #111120;
+  border-right: 1px solid #1e1e30; display: flex; flex-direction: column;
 }
 .mb-key {
-  display: flex; align-items: center;
-  padding-left: 3px;
-  cursor: pointer; user-select: none;
-  font-size: 8px; font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  line-height: 1; flex-shrink: 0;
-  border-bottom: 1px solid #1a1a28;
-  transition: filter .1s;
+  display: flex; align-items: center; padding: 0 4px;
+  cursor: pointer; user-select: none; flex-shrink: 0;
+  border-bottom: 1px solid #18182a; transition: filter .1s;
 }
-.mb-key:hover { filter: brightness(1.5); }
-.mb-key.wk { background: #1e1e2e; color: #555; }
-.mb-key.bk { background: #131320; color: #333; }
-.mb-key.wk span { color: #6366f1; }
+.mb-key:hover { filter: brightness(1.6); }
+.mb-key span  { font-size: 8px; font-weight: 600; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+.mb-key.wk    { background: #1a1a28; }
+.mb-key.wk span { color: #666; }
+.mb-key.bk    { background: #111120; }
+.mb-key.bk span { color: #3a3a50; }
+.mb-key.Cnote { background: #1c1c30; border-bottom: 1px solid #2a2a42; }
+.mb-key.Cnote span { color: #6366f1; font-size: 9px; }
 
-/* Scrollable roll area */
-.mb-roll-scroll {
-  flex: 1;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  background: #15151f;
-}
-.mb-roll-inner { position: relative; }
+/* Scrollable roll */
+.mb-roll-scroll { flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; background: #15151f; }
 
 /* Animations */
 @keyframes mb-pulse {
-  0%,100% { box-shadow: 0 0 0 0 #6366f130; }
-  50%      { box-shadow: 0 0 0 4px #6366f115; }
+  0%,100% { box-shadow: 0 0 0 0 #6366f128; }
+  50%      { box-shadow: 0 0 0 5px #6366f110; }
 }
 @keyframes mb-shake {
   0%,100% { transform: translateX(0); }
@@ -417,28 +398,22 @@ body {
 /* Tile pool */
 .mb-pool-section { margin-bottom: 12px; }
 .mb-pool-label {
-  display: block; font-size: 9px; color: #555;
-  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 7px;
+  display: block; font-size: 9px; color: #555; text-transform: uppercase;
+  letter-spacing: 1px; margin-bottom: 7px;
 }
 .mb-pool { display: flex; flex-wrap: wrap; gap: 5px; }
-
 .mb-tile {
-  min-width: 44px; height: 40px;
-  border-radius: 8px;
+  min-width: 44px; height: 40px; border-radius: 8px;
   border: 1.5px solid color-mix(in srgb, var(--nc) 45%, transparent);
   background: color-mix(in srgb, var(--nc) 10%, #0d0d1e);
-  color: var(--nc);
-  font-size: 13px; font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  cursor: pointer; padding: 0 10px;
+  color: var(--nc); font-size: 13px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace; cursor: pointer; padding: 0 10px;
   transition: all .12s;
 }
 .mb-tile:hover { background: color-mix(in srgb, var(--nc) 20%, #0d0d1e); }
 .mb-tile.picked {
-  background: var(--nc); color: #fff;
-  border-color: var(--nc);
+  background: var(--nc); color: #fff; border-color: var(--nc);
   box-shadow: 0 0 12px color-mix(in srgb, var(--nc) 45%, transparent);
   transform: translateY(-2px);
 }
-
 .mb-actions { display: flex; gap: 7px; flex-wrap: wrap; }
