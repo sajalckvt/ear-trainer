@@ -1,0 +1,137 @@
+/**
+ * Audio engine — mobile-safe AudioContext + soundfont decoding + playback.
+ *
+ * Architectural notes (preserved from v1):
+ * - iOS suspends AudioContext aggressively; we try to resume it on every call.
+ * - Audio unlock requires a silent sound played INSIDE a user gesture. A global
+ *   listener on touchstart/click/keydown ensures the context is unlocked ASAP.
+ * - Samples are decoded lazily on first use and cached in BC (buffer cache).
+ */
+
+import { m2n } from './theory';
+
+export type InstrumentId =
+  | 'choir_aahs'
+  | 'voice_oohs'
+  | 'acoustic_grand_piano'
+  | 'violin';
+
+// Soundfont shape: { instrumentId: { noteName: dataUrl } }
+type SoundfontData = Record<string, Record<string, string>>;
+
+// ─── State ──────────────────────────────────────────────────────────────────
+let ctx: AudioContext | null = null;
+let soundfont: SoundfontData | null = null;
+let soundfontPromise: Promise<SoundfontData> | null = null;
+const BC: Record<string, AudioBuffer> = {};
+
+// ─── Context management ────────────────────────────────────────────────────
+export function ensureCtx(): AudioContext {
+  if (!ctx) {
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    ctx = new AC();
+  }
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  return ctx;
+}
+
+function initAudioOnGesture(): void {
+  const a = ensureCtx();
+  try {
+    const osc = a.createOscillator();
+    const g = a.createGain();
+    g.gain.value = 0;
+    osc.connect(g).connect(a.destination);
+    osc.start(0);
+    osc.stop(a.currentTime + 0.01);
+  } catch {
+    /* noop */
+  }
+}
+
+/** Call once at app startup to wire up the iOS unlock handlers. */
+export function registerAudioUnlock(): void {
+  (['touchstart', 'touchend', 'click', 'keydown'] as const).forEach((evt) => {
+    document.addEventListener(evt, initAudioOnGesture, { passive: true });
+  });
+}
+
+// ─── Soundfont loading ─────────────────────────────────────────────────────
+export function loadSoundfont(url = 'soundfont.json'): Promise<SoundfontData> {
+  if (soundfont) return Promise.resolve(soundfont);
+  if (soundfontPromise) return soundfontPromise;
+
+  // Respect Vite's base URL so this works under GitHub Pages subpaths
+  const base = (import.meta as unknown as { env: { BASE_URL: string } }).env.BASE_URL;
+  const resolved = url.startsWith('/') || url.startsWith('http') ? url : `${base}${url}`;
+
+  soundfontPromise = fetch(resolved)
+    .then((r) => {
+      if (!r.ok) throw new Error(`Failed to load soundfont: ${r.status}`);
+      return r.json();
+    })
+    .then((data: SoundfontData) => {
+      soundfont = data;
+      return data;
+    });
+  return soundfontPromise;
+}
+
+// ─── Decode + play ────────────────────────────────────────────────────────
+function decodeNote(instId: InstrumentId, note: string): Promise<AudioBuffer | null> {
+  const k = `${instId}_${note}`;
+  if (BC[k]) return Promise.resolve(BC[k]);
+  if (!soundfont) return Promise.resolve(null);
+  const inst = soundfont[instId];
+  if (!inst || !inst[note]) return Promise.resolve(null);
+
+  const a = ensureCtx();
+  const dataUrl = inst[note];
+  const b64 = dataUrl.split(',')[1];
+  const bin = atob(b64);
+  const buf = new ArrayBuffer(bin.length);
+  const view = new Uint8Array(buf);
+  for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
+
+  return new Promise((resolve) => {
+    // decodeAudioData detaches the input buffer, so .slice(0) copies it
+    a.decodeAudioData(
+      buf.slice(0),
+      (decoded) => {
+        BC[k] = decoded;
+        resolve(decoded);
+      },
+      (err) => {
+        console.warn('Decode error:', note, err);
+        resolve(null);
+      }
+    );
+  });
+}
+
+function playBuf(audioBuf: AudioBuffer): void {
+  const a = ensureCtx();
+  if (a.state === 'suspended') a.resume().catch(() => {});
+  const src = a.createBufferSource();
+  src.buffer = audioBuf;
+  const g = a.createGain();
+  g.gain.value = 2.5;
+  src.connect(g).connect(a.destination);
+  src.start(0);
+}
+
+/** Play a note on an instrument, with optional delay in seconds. */
+export function pn(instId: InstrumentId, note: string, dl = 0): void {
+  decodeNote(instId, note).then((buf) => {
+    if (!buf) return;
+    if (dl > 0) setTimeout(() => playBuf(buf), dl * 1000);
+    else playBuf(buf);
+  });
+}
+
+/** Play a MIDI number on the given instrument with optional delay. */
+export function pm(instId: InstrumentId, midi: number, dl = 0): void {
+  pn(instId, m2n(midi), dl);
+}
