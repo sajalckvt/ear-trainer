@@ -343,12 +343,12 @@ body {
   color: #fff;
 }
 
-/* ── Melody Board ────────────────────────────────────────────────────────── */
+/* ── Melody Board (Piano Roll) ───────────────────────────────────────────── */
 .mb {
-  background: #0f0f22;
-  border: 1px solid #1a1a30;
+  background: #0f0f1e;
+  border: 1px solid #1a1a2e;
   border-radius: 14px;
-  padding: 14px;
+  padding: 12px 14px 14px;
   margin-bottom: 12px;
 }
 
@@ -357,77 +357,56 @@ body {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
 }
-.mb-song {
-  font-size: 13px; font-weight: 700; color: #c4b5fd;
-}
-.mb-artist {
-  font-size: 11px; color: #555;
-}
-.mb-progress {
-  font-size: 10px; color: #666; font-family: 'JetBrains Mono', monospace;
+.mb-song  { font-size: 13px; font-weight: 700; color: #c4b5fd; }
+.mb-artist { font-size: 11px; color: #444; }
+.mb-prog  { font-size: 10px; color: #555; font-family: 'JetBrains Mono', monospace; }
+
+/* Piano roll outer container */
+.mb-roll-outer {
+  display: flex;
+  border: 1px solid #1a1a30;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
 }
 
-/* Scrollable note row */
-.mb-scroll {
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
-  margin-bottom: 12px; padding-bottom: 2px;
+/* Piano key column */
+.mb-keys {
+  flex-shrink: 0;
+  width: 38px;
+  background: #12121e;
+  border-right: 1px solid #1e1e30;
+  display: flex;
+  flex-direction: column;
 }
-.mb-row {
-  display: flex; gap: 3px; width: max-content;
-}
-
-/* Note box base */
-.mb-box {
-  width: 34px; height: 40px;
-  border-radius: 7px; border: 1.5px solid #1e1e38;
-  font-size: 11px; font-weight: 700;
+.mb-key {
+  display: flex; align-items: center;
+  padding-left: 3px;
+  cursor: pointer; user-select: none;
+  font-size: 8px; font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  cursor: pointer; display: flex; align-items: center;
-  justify-content: center; flex-shrink: 0;
-  transition: transform .1s, box-shadow .1s;
-  padding: 0; line-height: 1;
+  line-height: 1; flex-shrink: 0;
+  border-bottom: 1px solid #1a1a28;
+  transition: filter .1s;
 }
+.mb-key:hover { filter: brightness(1.5); }
+.mb-key.wk { background: #1e1e2e; color: #555; }
+.mb-key.bk { background: #131320; color: #333; }
+.mb-key.wk span { color: #6366f1; }
 
-.mb-box.revealed {
-  background: color-mix(in srgb, var(--nc) 16%, #0f0f22);
-  border-color: color-mix(in srgb, var(--nc) 35%, transparent);
-  color: var(--nc);
+/* Scrollable roll area */
+.mb-roll-scroll {
+  flex: 1;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #15151f;
 }
-.mb-box.revealed:hover { transform: translateY(-2px); box-shadow: 0 4px 12px color-mix(in srgb, var(--nc) 25%, transparent); }
-.mb-box.revealed:active { transform: translateY(0); }
+.mb-roll-inner { position: relative; }
 
-.mb-box.blank {
-  background: #0d0d1e;
-  border: 1.5px dashed #2a2a3e;
-  color: #3a3a55; font-size: 14px;
-}
-.mb-box.blank:hover:not(:disabled) { border-color: #6366f1; color: #6366f1; }
-
-.mb-box.blank.target {
-  border: 1.5px solid #6366f1; color: #818cf8;
-  background: #6366f110;
-  animation: mb-pulse .9s ease-in-out infinite;
-}
+/* Animations */
 @keyframes mb-pulse {
-  0%,100% { box-shadow: 0 0 0 0 #6366f135; }
-  50%      { box-shadow: 0 0 0 5px #6366f110; }
-}
-
-.mb-box.blank.assigned {
-  border: 1.5px solid color-mix(in srgb, var(--nc) 45%, transparent);
-  background: color-mix(in srgb, var(--nc) 10%, #0d0d1e);
-  color: color-mix(in srgb, var(--nc) 75%, #888);
-}
-
-.mb-box.blank.correct {
-  border: 1.5px solid #22c55e55;
-  background: #22c55e12; color: #22c55e;
-}
-
-.mb-box.blank.wrong {
-  border: 1.5px solid #ef444455;
-  background: #ef444412; color: #ef4444;
-  animation: mb-shake .4s ease;
+  0%,100% { box-shadow: 0 0 0 0 #6366f130; }
+  50%      { box-shadow: 0 0 0 4px #6366f115; }
 }
 @keyframes mb-shake {
   0%,100% { transform: translateX(0); }
@@ -435,36 +414,31 @@ body {
   75%      { transform: translateX(3px); }
 }
 
-/* Answer pool */
-.mb-pool-wrap { margin-bottom: 12px; }
+/* Tile pool */
+.mb-pool-section { margin-bottom: 12px; }
 .mb-pool-label {
-  display: block; font-size: 9px; color: #444;
-  text-transform: uppercase; letter-spacing: 1px;
-  margin-bottom: 7px;
+  display: block; font-size: 9px; color: #555;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 7px;
 }
-.mb-pool {
-  display: flex; flex-wrap: wrap; gap: 6px;
-}
+.mb-pool { display: flex; flex-wrap: wrap; gap: 5px; }
 
 .mb-tile {
-  min-width: 48px; height: 42px;
-  border-radius: 9px;
-  border: 1.5px solid color-mix(in srgb, var(--nc) 50%, transparent);
+  min-width: 44px; height: 40px;
+  border-radius: 8px;
+  border: 1.5px solid color-mix(in srgb, var(--nc) 45%, transparent);
   background: color-mix(in srgb, var(--nc) 10%, #0d0d1e);
   color: var(--nc);
   font-size: 13px; font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  cursor: pointer; padding: 0 12px;
+  cursor: pointer; padding: 0 10px;
   transition: all .12s;
 }
 .mb-tile:hover { background: color-mix(in srgb, var(--nc) 20%, #0d0d1e); }
 .mb-tile.picked {
   background: var(--nc); color: #fff;
   border-color: var(--nc);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--nc) 40%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--nc) 45%, transparent);
   transform: translateY(-2px);
 }
 
-.mb-actions {
-  display: flex; gap: 7px; flex-wrap: wrap;
-}
+.mb-actions { display: flex; gap: 7px; flex-wrap: wrap; }
