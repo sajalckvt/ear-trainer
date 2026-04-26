@@ -4,21 +4,29 @@ import type { InstrumentId } from '../audio/engine';
 import { playCadence } from '../audio/cadence';
 import { keyToOffset } from '../audio/theory';
 
+/** Three phases of a single question */
+export type QuizPhase =
+  | 'idle'        // no question yet
+  | 'playing'     // awaiting first answer
+  | 'close_miss'  // first guess was close — retry available, score already penalised
+  | 'answered';   // final state — correct or wrong, show full feedback
+
 export interface Feedback {
   ok: boolean;
   guess: string | number;
+  phase: QuizPhase;
 }
 
 export interface QuizSession<TPayload = unknown> {
   exercise: Exercise<TPayload>;
   question: (Question & { payload: TPayload; pickId: string | number }) | null;
   feedback: Feedback | null;
-  // metrics
+  quizPhase: QuizPhase;
   correct: number;
   total: number;
   streak: number;
   best: number;
-  answered: boolean;  // user has locked in an answer for current question
+  nearMisses: number;
 }
 
 export interface UseQuizStateOptions {
@@ -35,20 +43,24 @@ export function useQuizState(opts: UseQuizStateOptions) {
     exercise: opts.exercise,
     question: null,
     feedback: null,
+    quizPhase: 'idle',
     correct: 0,
     total: 0,
     streak: 0,
     best: 0,
-    answered: false,
+    nearMisses: 0,
   });
   const historyRef = useRef<Array<string | number>>([]);
 
-  // When the exercise itself changes (phase swap), reset question + history
-  // but keep score (the user may want to continue scoring across phases).
-  // v1 behavior: score is per-session, so we keep it.
   if (session.exercise.id !== opts.exercise.id) {
     historyRef.current = [];
-    setSession((s) => ({ ...s, exercise: opts.exercise, question: null, feedback: null, answered: false }));
+    setSession((s) => ({
+      ...s,
+      exercise: opts.exercise,
+      question: null,
+      feedback: null,
+      quizPhase: 'idle',
+    }));
   }
 
   const nextQuestion = useCallback(() => {
@@ -62,9 +74,8 @@ export function useQuizState(opts: UseQuizStateOptions) {
     historyRef.current.push(q.pickId);
     if (historyRef.current.length > 10) historyRef.current.shift();
 
-    setSession((s) => ({ ...s, question: q, feedback: null, answered: false }));
+    setSession((s) => ({ ...s, question: q, feedback: null, quizPhase: 'playing' }));
 
-    // Play cadence first (if enabled), then the question
     playCadence(60 + keyOffset, opts.instrument, opts.cadenceEnabled, () => {
       opts.exercise.play(q, opts.instrument);
     });
@@ -78,18 +89,57 @@ export function useQuizState(opts: UseQuizStateOptions) {
   const answer = useCallback(
     (guess: string | number) => {
       setSession((s) => {
-        if (s.answered || !s.question) return s;
+        if (s.quizPhase === 'answered' || s.quizPhase === 'idle' || !s.question) return s;
+
         const ok = opts.exercise.isCorrect(s.question, guess);
-        const newCorrect = s.correct + (ok ? 1 : 0);
-        const newStreak = ok ? s.streak + 1 : 0;
+
+        // If already in close_miss phase — this is the retry, just resolve
+        if (s.quizPhase === 'close_miss') {
+          const newStreak = ok ? s.streak + 1 : 0;
+          return {
+            ...s,
+            feedback: { ok, guess, phase: 'answered' },
+            quizPhase: 'answered',
+            // Score was already counted on first guess — don't double-count
+            streak: newStreak,
+            best: Math.max(s.best, newStreak),
+          };
+        }
+
+        // First guess
+        if (ok) {
+          const newStreak = s.streak + 1;
+          return {
+            ...s,
+            feedback: { ok: true, guess, phase: 'answered' },
+            quizPhase: 'answered',
+            total: s.total + 1,
+            correct: s.correct + 1,
+            streak: newStreak,
+            best: Math.max(s.best, newStreak),
+          };
+        }
+
+        // Wrong — check if close
+        const close = opts.exercise.isClose?.(s.question, guess) ?? false;
+        if (close) {
+          return {
+            ...s,
+            feedback: { ok: false, guess, phase: 'close_miss' },
+            quizPhase: 'close_miss',
+            total: s.total + 1,    // counts as wrong immediately
+            streak: 0,
+            nearMisses: s.nearMisses + 1,
+          };
+        }
+
+        // Wrong + not close — full reveal
         return {
           ...s,
-          feedback: { ok, guess },
-          answered: true,
+          feedback: { ok: false, guess, phase: 'answered' },
+          quizPhase: 'answered',
           total: s.total + 1,
-          correct: newCorrect,
-          streak: newStreak,
-          best: Math.max(s.best, newStreak),
+          streak: 0,
         };
       });
     },
@@ -97,12 +147,12 @@ export function useQuizState(opts: UseQuizStateOptions) {
   );
 
   const resetScore = useCallback(() => {
-    setSession((s) => ({ ...s, correct: 0, total: 0, streak: 0, best: 0 }));
+    setSession((s) => ({ ...s, correct: 0, total: 0, streak: 0, best: 0, nearMisses: 0 }));
   }, []);
 
   const resetQuestion = useCallback(() => {
     historyRef.current = [];
-    setSession((s) => ({ ...s, question: null, feedback: null, answered: false }));
+    setSession((s) => ({ ...s, question: null, feedback: null, quizPhase: 'idle' }));
   }, []);
 
   return { session, nextQuestion, replay, answer, resetScore, resetQuestion };

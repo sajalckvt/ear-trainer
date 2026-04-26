@@ -10,13 +10,11 @@ import { ReferencePage } from './pages/ReferencePage';
 type Screen = 'train' | 'ref';
 
 export default function App() {
-  // ─── Initialize audio and load soundfont once ────────────────────────────
   useEffect(() => {
     registerAudioUnlock();
     loadSoundfont().catch((err) => console.error('Soundfont load failed:', err));
   }, []);
 
-  // ─── App-level settings state ────────────────────────────────────────────
   const [screen, setScreen] = useState<Screen>('train');
   const [exerciseId, setExerciseId] = useState<string>('interval');
   const [levelIndex, setLevelIndex] = useState<number>(0);
@@ -30,20 +28,12 @@ export default function App() {
     [exerciseId]
   );
 
-  // ─── Quiz session ────────────────────────────────────────────────────────
   const { session, nextQuestion, replay, answer, resetScore, resetQuestion } = useQuizState({
-    exercise: activeExercise,
-    levelIndex,
-    keyName,
-    direction,
-    cadenceEnabled,
-    instrument,
+    exercise: activeExercise, levelIndex, keyName, direction, cadenceEnabled, instrument,
   });
 
-  // ─── Weekly timer ────────────────────────────────────────────────────────
   const { formatted: timerLabel, reset: resetTimer } = useTrainingTimer();
 
-  // ─── Event handlers that also reset the current question ────────────────
   const handleExerciseChange = useCallback((id: string) => {
     setExerciseId(id);
     setLevelIndex(0);
@@ -59,7 +49,7 @@ export default function App() {
     <div className="app">
       <div className="hdr">
         <h1>♪ Ear Trainer</h1>
-        <div className="sub">Intervals &amp; Triads</div>
+        <div className="sub">Intervals · Distance · Triads</div>
       </div>
 
       <NavTabs screen={screen} onChange={setScreen} />
@@ -81,10 +71,12 @@ export default function App() {
         onInstrumentChange={setInstrument}
         question={session.question}
         feedback={session.feedback}
+        quizPhase={session.quizPhase}
         correct={session.correct}
         total={session.total}
         streak={session.streak}
         best={session.best}
+        nearMisses={session.nearMisses}
         timerLabel={timerLabel}
         onStart={nextQuestion}
         onReplay={replay}

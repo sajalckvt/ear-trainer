@@ -250,3 +250,95 @@ body {
   .kb { padding: 4px 5px; font-size: 9px; }
   .phase-btn { padding: 5px 8px; font-size: 10px; }
 }
+
+/* ── Feedback sheet ──────────────────────────────────────────────────────── */
+.fs-backdrop {
+  position: fixed; inset: 0; z-index: 99;
+  background: transparent; pointer-events: auto;
+}
+
+.fs {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: #0f0f22;
+  border-top: 2px solid #1e1e38;
+  border-radius: 18px 18px 0 0;
+  padding: 10px 20px 28px;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 55vh;
+  overflow-y: auto;
+  box-shadow: 0 -8px 40px #00000060;
+}
+
+.fs.open { transform: translateY(0); }
+
+@media (min-width: 600px) {
+  .fs {
+    left: 50%; right: auto;
+    width: 560px;
+    transform: translateX(-50%) translateY(100%);
+    border-radius: 18px 18px 0 0;
+  }
+  .fs.open { transform: translateX(-50%) translateY(0); }
+}
+
+.fs-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: #2a2a3e; margin: 0 auto 12px;
+}
+
+.fs-x {
+  position: absolute; top: 14px; right: 16px;
+  background: none; border: none; color: #444;
+  font-size: 14px; cursor: pointer; line-height: 1;
+  padding: 4px 6px; border-radius: 6px;
+}
+.fs-x:hover { color: #888; }
+
+.fs-body { text-align: center; padding: 4px 0 4px; }
+
+.fs-icon { font-size: 26px; margin-bottom: 6px; }
+
+.fs-title {
+  font-size: 16px; font-weight: 700; margin-bottom: 8px;
+}
+
+.fs-hint {
+  font-size: 13px; color: #ccc; line-height: 1.55;
+  max-width: 360px; margin: 0 auto 8px;
+}
+
+.fs-sub { font-size: 11px; color: #555; margin-top: 4px; }
+
+.fs-name {
+  font-size: 20px; font-weight: 800;
+  margin-bottom: 10px; letter-spacing: -0.3px;
+}
+
+.fs-ref {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 12px; color: #aaa; line-height: 1.45;
+  max-width: 400px; margin: 0 auto 4px; text-align: left;
+}
+.fs-ref.alt { color: #666; font-size: 11px; }
+.fs-ref-icon { flex-shrink: 0; margin-top: 1px; }
+
+.fs-actions {
+  display: flex; gap: 8px; justify-content: center;
+  margin-top: 14px;
+}
+
+.fs-btn {
+  padding: 8px 20px; border-radius: 10px; font-size: 12px;
+  font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: opacity .15s;
+}
+.fs-btn:hover { opacity: .85; }
+.fs-btn.demo {
+  border: 1.5px solid #6366f1; background: transparent; color: #a5b4fc;
+}
+.fs-btn.next {
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+}

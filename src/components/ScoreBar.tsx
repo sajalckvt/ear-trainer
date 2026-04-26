@@ -3,19 +3,15 @@ interface ScoreBarProps {
   total: number;
   streak: number;
   best: number;
+  nearMisses: number;
   timerLabel: string;
   onResetScore: () => void;
   onResetTimer: () => void;
 }
 
 export function ScoreBar({
-  correct,
-  total,
-  streak,
-  best,
-  timerLabel,
-  onResetScore,
-  onResetTimer,
+  correct, total, streak, best, nearMisses, timerLabel,
+  onResetScore, onResetTimer,
 }: ScoreBarProps) {
   const acc = total > 0 ? Math.round((correct / total) * 100) : 0;
   return (
@@ -35,6 +31,10 @@ export function ScoreBar({
       <div className="sc">
         <div className="v" style={{ color: '#ec4899' }}>{best}</div>
         <div className="l">Best</div>
+      </div>
+      <div className="sc">
+        <div className="v" style={{ color: '#a855f7' }}>{nearMisses}</div>
+        <div className="l">Near</div>
       </div>
       <div className="sc">
         <div className="v" style={{ color: '#14b8a6' }}>{timerLabel}</div>
