@@ -344,132 +344,127 @@ body {
 }
 
 /* ── Melody Board ────────────────────────────────────────────────────────── */
-.mb-wrap {
+.mb {
   background: #0f0f22;
   border: 1px solid #1a1a30;
   border-radius: 14px;
-  padding: 14px 14px 12px;
+  padding: 14px;
   margin-bottom: 12px;
 }
 
-.mb-title {
-  display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px;
+/* Header */
+.mb-hdr {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
 }
 .mb-song {
   font-size: 13px; font-weight: 700; color: #c4b5fd;
 }
-.mb-hint {
-  font-size: 10px; color: #555;
+.mb-artist {
+  font-size: 11px; color: #555;
+}
+.mb-progress {
+  font-size: 10px; color: #666; font-family: 'JetBrains Mono', monospace;
 }
 
-.mb-scroll-wrap {
+/* Scrollable note row */
+.mb-scroll {
   overflow-x: auto; -webkit-overflow-scrolling: touch;
-  margin-bottom: 12px; padding-bottom: 4px;
+  margin-bottom: 12px; padding-bottom: 2px;
 }
-.mb-notes {
-  display: flex; gap: 4px;
-  /* wide enough to not wrap */
-  width: max-content;
+.mb-row {
+  display: flex; gap: 3px; width: max-content;
 }
 
-/* Individual note box */
-.mb-note {
-  width: 40px; height: 44px;
-  border-radius: 8px; border: 1.5px solid #1e1e38;
-  font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; transition: all .15s; padding: 0;
+/* Note box base */
+.mb-box {
+  width: 34px; height: 40px;
+  border-radius: 7px; border: 1.5px solid #1e1e38;
+  font-size: 11px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+  transition: transform .1s, box-shadow .1s;
+  padding: 0; line-height: 1;
 }
 
-/* Revealed note: shown, colored, clickable */
-.mb-note.revealed {
-  background: color-mix(in srgb, var(--nc) 18%, #0f0f22);
-  border-color: color-mix(in srgb, var(--nc) 40%, transparent);
+.mb-box.revealed {
+  background: color-mix(in srgb, var(--nc) 16%, #0f0f22);
+  border-color: color-mix(in srgb, var(--nc) 35%, transparent);
   color: var(--nc);
 }
-.mb-note.revealed:hover {
-  background: color-mix(in srgb, var(--nc) 28%, #0f0f22);
-  transform: translateY(-2px);
-}
+.mb-box.revealed:hover { transform: translateY(-2px); box-shadow: 0 4px 12px color-mix(in srgb, var(--nc) 25%, transparent); }
+.mb-box.revealed:active { transform: translateY(0); }
 
-/* Blank: no note, dashed border */
-.mb-note.blank {
+.mb-box.blank {
   background: #0d0d1e;
   border: 1.5px dashed #2a2a3e;
-  color: #444;
-  font-size: 14px;
+  color: #3a3a55; font-size: 14px;
 }
-.mb-note.blank:hover:not(:disabled) {
-  border-color: #6366f1; color: #6366f1;
-}
+.mb-box.blank:hover:not(:disabled) { border-color: #6366f1; color: #6366f1; }
 
-/* Blank selected as target */
-.mb-note.blank.target {
-  border-color: #6366f1; border-style: solid;
-  color: #6366f1; background: #6366f110;
-  animation: mb-pulse 0.9s ease-in-out infinite;
+.mb-box.blank.target {
+  border: 1.5px solid #6366f1; color: #818cf8;
+  background: #6366f110;
+  animation: mb-pulse .9s ease-in-out infinite;
 }
 @keyframes mb-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 #6366f140; }
-  50%       { box-shadow: 0 0 0 4px #6366f120; }
+  0%,100% { box-shadow: 0 0 0 0 #6366f135; }
+  50%      { box-shadow: 0 0 0 5px #6366f110; }
 }
 
-/* Blank with assigned (pending) note */
-.mb-note.blank.assigned {
-  background: color-mix(in srgb, var(--nc) 12%, #0d0d1e);
-  border-color: color-mix(in srgb, var(--nc) 30%, transparent);
-  border-style: solid;
-  color: color-mix(in srgb, var(--nc) 70%, #888);
+.mb-box.blank.assigned {
+  border: 1.5px solid color-mix(in srgb, var(--nc) 45%, transparent);
+  background: color-mix(in srgb, var(--nc) 10%, #0d0d1e);
+  color: color-mix(in srgb, var(--nc) 75%, #888);
 }
 
-/* Correct (locked) */
-.mb-note.blank.correct {
-  background: #22c55e18; border-color: #22c55e55; border-style: solid;
-  color: #22c55e;
+.mb-box.blank.correct {
+  border: 1.5px solid #22c55e55;
+  background: #22c55e12; color: #22c55e;
 }
 
-/* Wrong (flash) */
-.mb-note.blank.wrong {
-  background: #ef444418; border-color: #ef444455; border-style: solid;
-  color: #ef4444;
-  animation: mb-shake 0.4s ease;
+.mb-box.blank.wrong {
+  border: 1.5px solid #ef444455;
+  background: #ef444412; color: #ef4444;
+  animation: mb-shake .4s ease;
 }
 @keyframes mb-shake {
-  0%, 100% { transform: translateX(0); }
-  25%       { transform: translateX(-4px); }
-  75%       { transform: translateX(4px); }
+  0%,100% { transform: translateX(0); }
+  25%      { transform: translateX(-3px); }
+  75%      { transform: translateX(3px); }
 }
 
-/* Answer tile pool */
+/* Answer pool */
+.mb-pool-wrap { margin-bottom: 12px; }
+.mb-pool-label {
+  display: block; font-size: 9px; color: #444;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 7px;
+}
 .mb-pool {
   display: flex; flex-wrap: wrap; gap: 6px;
-  margin-bottom: 12px;
 }
 
 .mb-tile {
-  min-width: 52px; height: 44px;
-  border-radius: 10px; border: 1.5px solid var(--nc);
-  background: color-mix(in srgb, var(--nc) 12%, #0d0d1e);
+  min-width: 48px; height: 42px;
+  border-radius: 9px;
+  border: 1.5px solid color-mix(in srgb, var(--nc) 50%, transparent);
+  background: color-mix(in srgb, var(--nc) 10%, #0d0d1e);
   color: var(--nc);
-  font-size: 13px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
-  cursor: pointer; transition: all .15s; padding: 0 10px;
+  font-size: 13px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer; padding: 0 12px;
+  transition: all .12s;
 }
-.mb-tile:hover {
-  background: color-mix(in srgb, var(--nc) 22%, #0d0d1e);
-}
+.mb-tile:hover { background: color-mix(in srgb, var(--nc) 20%, #0d0d1e); }
 .mb-tile.picked {
-  background: var(--nc);
-  color: #fff;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--nc) 50%, transparent);
+  background: var(--nc); color: #fff;
+  border-color: var(--nc);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--nc) 40%, transparent);
   transform: translateY(-2px);
 }
 
-/* Actions */
 .mb-actions {
-  display: flex; gap: 8px; flex-wrap: wrap;
-}
-
-.mb-done {
-  text-align: center; font-size: 13px; font-weight: 700;
-  color: #22c55e; margin-top: 8px;
+  display: flex; gap: 7px; flex-wrap: wrap;
 }

@@ -117,8 +117,8 @@ export function TrainPage(props: TrainPageProps) {
         showDirection={activeExercise.usesDirection}
         direction={direction} onDirectionChange={onDirectionChange}
       />
-      <KeyRow keyName={keyName} onChange={onKeyChange} />
-      <CadenceToggle on={cadenceEnabled} onChange={onCadenceChange} />
+      {activeExercise.id !== 'melody' && <KeyRow keyName={keyName} onChange={onKeyChange} />}
+      {activeExercise.id !== 'melody' && <CadenceToggle on={cadenceEnabled} onChange={onCadenceChange} />}
       <InstrumentPicker instrument={instrument} onChange={onInstrumentChange} />
 
       <ScoreBar
@@ -190,9 +190,8 @@ function Roadmap({ activeId }: { activeId: string }) {
     { id: 'interval', n: 1, label: 'Intervals', color: '#6366f1' },
     { id: 'distance', n: 2, label: 'Distance',  color: '#8b5cf6' },
     { id: 'triad',    n: 3, label: 'Triads',    color: '#c084fc' },
-    { id: 'pitch',    n: 4, label: 'Pitch ID',  color: '#f472b6' },
-    { id: 'melody',   n: 5, label: 'Melodies',  color: '#fb923c' },
-    { id: null,       n: 6, label: 'More soon', color: null },
+    { id: 'melody',   n: 4, label: 'Melodies',  color: '#fb923c' },
+    { id: null,       n: 5, label: 'More soon', color: null },
   ];
   return (
     <div className="roadmap">

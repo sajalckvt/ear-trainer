@@ -5,27 +5,22 @@ import type { Question } from '../exercises/types';
 import { useMelodyRound } from '../hooks/useMelodyRound';
 import { NN } from '../data/constants';
 
-// 12-color palette matching pitch exercise
 const NOTE_COLORS = [
   '#818cf8','#ef4444','#f97316','#eab308','#22c55e',
   '#14b8a6','#a855f7','#3b82f6','#ec4899','#f43f5e',
   '#8b5cf6','#06b6d4',
 ];
-function noteColor(midi: number) {
-  return NOTE_COLORS[((midi % 12) + 12) % 12];
-}
-function noteName(midi: number) {
-  return NN[((midi % 12) + 12) % 12];
-}
+const nc = (midi: number) => NOTE_COLORS[((midi % 12) + 12) % 12];
+const nn = (midi: number) => NN[((midi % 12) + 12) % 12];
 
-interface MelodyBoardProps {
+interface Props {
   question: Question & { payload: MelodyPayload };
   instrument: InstrumentId;
   onComplete: (clean: boolean) => void;
   onNext: () => void;
 }
 
-export function MelodyBoard({ question, instrument, onComplete, onNext }: MelodyBoardProps) {
+export function MelodyBoard({ question, instrument, onComplete, onNext }: Props) {
   const payload = question.payload as MelodyPayload;
   const { melody, blankIndices } = payload;
 
@@ -34,7 +29,7 @@ export function MelodyBoard({ question, instrument, onComplete, onNext }: Melody
     tapBlank, tapTile,
   } = useMelodyRound(payload, onComplete);
 
-  // Auto-play melody with gaps when question loads
+  // Auto-play melody with gaps on mount
   useEffect(() => {
     const beatSec = 60 / melody.bpm;
     let t = 0;
@@ -42,133 +37,129 @@ export function MelodyBoard({ question, instrument, onComplete, onNext }: Melody
       if (!blankIndices.includes(idx)) pm(instrument, note.midi, t);
       t += note.beats * beatSec;
     });
-  }, [String((question as unknown as {pickId: unknown}).pickId)]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [(question as unknown as {pickId: unknown}).pickId]); // eslint-disable-line
 
-  function playGapped() {
+  const playGapped = () => {
     const beatSec = 60 / melody.bpm;
     let t = 0;
     melody.notes.forEach((note, idx) => {
       if (!blankIndices.includes(idx)) pm(instrument, note.midi, t);
       t += note.beats * beatSec;
     });
-  }
+  };
 
-  function playFull() {
+  const playFull = () => {
     const beatSec = 60 / melody.bpm;
     let t = 0;
     melody.notes.forEach((note, idx) => {
       const isBlank = blankIndices.includes(idx);
       if (isBlank) {
         const key = assignments[idx];
-        const assigned = key ? parseInt(key.split('_')[0]) : null;
-        if (assigned !== null) pm(instrument, assigned, t);
+        const mid = key ? parseInt(key.split('_')[0]) : null;
+        if (mid !== null) pm(instrument, mid, t);
       } else {
         pm(instrument, note.midi, t);
       }
       t += note.beats * beatSec;
     });
-  }
+  };
+
+  const placedCount = blankIndices.filter(i => locked.has(i)).length;
+  const hasAnyPlaced = Object.values(assignments).some(Boolean);
 
   return (
-    <div className="mb-wrap">
-      {/* Title + melody name */}
-      <div className="mb-title">
-        <span className="mb-song">{melody.title}</span>
-        <span className="mb-hint">
-          {blankIndices.length} missing note{blankIndices.length > 1 ? 's' : ''}
-        </span>
+    <div className="mb">
+
+      {/* Header */}
+      <div className="mb-hdr">
+        <div>
+          <span className="mb-song">{melody.title}</span>
+          <span className="mb-artist"> — {melody.artist}</span>
+        </div>
+        <div className="mb-progress">
+          {allDone
+            ? <span style={{color:'#22c55e'}}>✓ Complete</span>
+            : <span>{placedCount}/{blankIndices.length} correct</span>}
+        </div>
       </div>
 
-      {/* Note boxes — horizontally scrollable */}
-      <div className="mb-scroll-wrap">
-        <div className="mb-notes">
+      {/* Note sequence */}
+      <div className="mb-scroll">
+        <div className="mb-row">
           {melody.notes.map((note, idx) => {
             const isBlank = blankIndices.includes(idx);
+
             if (!isBlank) {
-              // Revealed note — clickable to play
-              const col = noteColor(note.midi);
               return (
                 <button
                   key={idx}
-                  className="mb-note revealed"
-                  style={{ '--nc': col } as React.CSSProperties}
+                  className="mb-box revealed"
+                  style={{ '--nc': nc(note.midi) } as React.CSSProperties}
                   onClick={() => pm(instrument, note.midi, 0)}
-                  title={`Play ${noteName(note.midi)}`}
+                  title={nn(note.midi)}
                 >
-                  {noteName(note.midi)}
+                  {nn(note.midi)}
                 </button>
               );
             }
 
-            // Blank position
             const tileKey = assignments[idx] ?? null;
-            const assignedMidi = tileKey ? parseInt(tileKey.split('_')[0]) : null;
+            const mid = tileKey ? parseInt(tileKey.split('_')[0]) : null;
             const result = results[idx] ?? null;
             const isLocked = locked.has(idx);
-            const isSelectedBlank = selection?.type === 'blank' && selection.idx === idx;
+            const isTarget = selection?.type === 'blank' && selection.idx === idx;
 
-            let cls = 'mb-note blank';
-            if (isLocked) cls += ' correct';
+            let cls = 'mb-box blank';
+            if (isLocked)          cls += ' correct';
             else if (result === 'wrong') cls += ' wrong';
-            else if (assignedMidi !== null) cls += ' assigned';
-            else if (isSelectedBlank) cls += ' target';
-
-            const col = assignedMidi !== null ? noteColor(assignedMidi) : '#6366f1';
+            else if (mid !== null)  cls += ' assigned';
+            else if (isTarget)      cls += ' target';
 
             return (
               <button
                 key={idx}
                 className={cls}
-                style={{ '--nc': col } as React.CSSProperties}
+                style={{ '--nc': mid ? nc(mid) : '#6366f1' } as React.CSSProperties}
                 onClick={() => tapBlank(idx)}
                 disabled={isLocked}
               >
-                {isLocked && assignedMidi !== null ? noteName(assignedMidi) :
-                 result === 'wrong' && assignedMidi !== null ? noteName(assignedMidi) :
-                 assignedMidi !== null ? noteName(assignedMidi) :
-                 isSelectedBlank ? '→' : '?'}
+                {isLocked && mid ? nn(mid)
+                  : mid ? nn(mid)
+                  : isTarget ? '▸' : '?'}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Answer tile pool */}
-      {!allDone && (
-        <div className="mb-pool">
-          {poolTiles.map((tile) => {
-            const isSelected = selection?.type === 'tile' && selection.key === tile.key;
-            const col = noteColor(tile.midi);
-            return (
-              <button
-                key={tile.key}
-                className={`mb-tile${isSelected ? ' picked' : ''}`}
-                style={{ '--nc': col } as React.CSSProperties}
-                onClick={() => tapTile(tile.key)}
-              >
-                {noteName(tile.midi)}
-              </button>
-            );
-          })}
+      {/* Answer pool */}
+      {!allDone && poolTiles.length > 0 && (
+        <div className="mb-pool-wrap">
+          <span className="mb-pool-label">Tap a note, then tap a blank</span>
+          <div className="mb-pool">
+            {poolTiles.map((tile) => {
+              const picked = selection?.type === 'tile' && selection.key === tile.key;
+              return (
+                <button
+                  key={tile.key}
+                  className={`mb-tile${picked ? ' picked' : ''}`}
+                  style={{ '--nc': nc(tile.midi) } as React.CSSProperties}
+                  onClick={() => tapTile(tile.key)}
+                >
+                  {nn(tile.midi)}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* Action row */}
+      {/* Actions */}
       <div className="mb-actions">
-        <button className="abtn rpb" onClick={playGapped}>🔈 Play (gaps)</button>
-        {Object.values(assignments).some(Boolean) && (
-          <button className="abtn rpb" onClick={playFull}>🔈 Play (filled)</button>
-        )}
-        {allDone && (
-          <button className="abtn nxb" onClick={onNext}>Next →</button>
-        )}
+        <button className="abtn rpb" onClick={playGapped}>▶ Play (gaps)</button>
+        {hasAnyPlaced && <button className="abtn rpb" onClick={playFull}>▶ Play (filled)</button>}
+        {allDone && <button className="abtn nxb" onClick={onNext}>Next →</button>}
       </div>
-
-      {allDone && (
-        <div className="mb-done">
-          ✓ Complete!
-        </div>
-      )}
     </div>
   );
 }
