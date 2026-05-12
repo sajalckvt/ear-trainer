@@ -4,7 +4,7 @@ import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
 import type { InstrumentId } from '../audio/engine';
 import {
-  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, InstrumentPicker,
+  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, InstrumentPicker,
 } from '../components/Controls';
 import { ScoreBar } from '../components/ScoreBar';
 import { PlayArea } from '../components/PlayArea';
@@ -29,6 +29,8 @@ interface TrainPageProps {
   onCadenceChange: (v: boolean) => void;
   spread: boolean;
   onSpreadChange: (v: boolean) => void;
+  arpeggio: boolean;
+  onArpeggioChange: (v: boolean) => void;
   instrument: InstrumentId;
   onInstrumentChange: (id: InstrumentId) => void;
   question: (Question & { pickId: string | number }) | null;
@@ -54,6 +56,7 @@ export function TrainPage(props: TrainPageProps) {
     levelIndex, onLevelChange, direction, onDirectionChange,
     keyName, onKeyChange, cadenceEnabled, onCadenceChange,
     spread, onSpreadChange,
+    arpeggio, onArpeggioChange,
     instrument, onInstrumentChange,
     question, feedback, quizPhase,
     correct, total, streak, best, nearMisses,
@@ -123,6 +126,7 @@ export function TrainPage(props: TrainPageProps) {
       {activeExercise.id !== 'melody' && <KeyRow keyName={keyName} onChange={onKeyChange} />}
       {activeExercise.id !== 'melody' && <CadenceToggle on={cadenceEnabled} onChange={onCadenceChange} />}
       {activeExercise.id === 'triad' && <SpreadToggle on={spread} onChange={onSpreadChange} />}
+      {activeExercise.id === 'triad' && <ArpeggioToggle on={arpeggio} onChange={onArpeggioChange} />}
       <InstrumentPicker instrument={instrument} onChange={onInstrumentChange} />
 
       <ScoreBar

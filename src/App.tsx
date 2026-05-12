@@ -22,6 +22,7 @@ export default function App() {
   const [keyName, setKeyName] = useState<string>('C');
   const [cadenceEnabled, setCadenceEnabled] = useState<boolean>(false);
   const [spread, setSpread] = useState<boolean>(false);
+  const [arpeggio, setArpeggio] = useState<boolean>(true);
   const [instrument, setInstrument] = useState<InstrumentId>('acoustic_grand_piano');
 
   const activeExercise = useMemo(
@@ -30,7 +31,7 @@ export default function App() {
   );
 
   const { session, nextQuestion, replay, answer, resetScore, resetQuestion } = useQuizState({
-    exercise: activeExercise, levelIndex, keyName, direction, cadenceEnabled, spread, instrument,
+    exercise: activeExercise, levelIndex, keyName, direction, cadenceEnabled, spread, arpeggio, instrument,
   });
 
   const { formatted: timerLabel, reset: resetTimer } = useTrainingTimer();
@@ -70,6 +71,8 @@ export default function App() {
         onCadenceChange={setCadenceEnabled}
         spread={spread}
         onSpreadChange={setSpread}
+        arpeggio={arpeggio}
+        onArpeggioChange={setArpeggio}
         instrument={instrument}
         onInstrumentChange={setInstrument}
         question={session.question}

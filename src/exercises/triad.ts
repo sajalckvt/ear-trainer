@@ -11,9 +11,9 @@
  *   Expert:    dom7, dom7♭9, dom7♯9 (5-note dom-tension family)
  *
  * Spread voicing: when `opts.spread === true`, each chord tone gets a
- * random 0/1/2-octave bump (range-clamped to the soundfont). This forces
- * the user to recognize the chord *quality* rather than memorize its
- * close-position shape.
+ * random 0/1-octave bump (1 octave max, range-clamped to the soundfont).
+ * This forces the user to recognize the chord *quality* rather than
+ * memorize its close-position shape.
  *
  * Internal id remains 'triad' to preserve any persisted user state from
  * the previous "Triads" exercise; the display name is now "Chords".
@@ -80,8 +80,8 @@ const CHORD_HINTS: Record<string, string> = {
   'min_pwr':            'Close! Same R+5 backbone. Without the m3 in the middle, it\'s neither major nor minor — pure neutral.',
   'dom7_maj7':          'Close! You heard the 4-note quality. The top note is bluesy (♭7) vs. dreamy (M7).',
   'maj7_dom7':          'Close! Same richness — is that top note dreamy (M7) or bluesy (♭7)?',
-  'dom7_min7':          'Close! Both are smoky 7ths. Bright major foundation, or dark minor?',
-  'min7_dom7':          'Close! Both have ♭7 warmth. Foundation bright (major) or dark (minor)?',
+  'dom7_min7':          'Close! Both share R + P5 + ♭7. dom7 has a major 3rd — it feels restless, wanting to resolve. min7 has a minor 3rd — settled, content.',
+  'min7_dom7':          'Close! Both share R + P5 + ♭7. min7 has a minor 3rd — feels settled and content. dom7 has a major 3rd — restless, asks a question.',
   'min7_m7b5':          'Close! Both are dark and silky. The 5th is lowered, adding tension underneath.',
   'm7b5_min7':          'Close! Same minor-ish silk. The 5th is natural, not flatted — less tense underneath.',
   'm7b5_dim7':          'Close! Both feel unstable. dim7 lowers the ♭7 to a ♭♭7 — fully symmetrical.',
@@ -124,7 +124,7 @@ function makeChordDemo(intervals: number[]) {
 function applySpread(rootMidi: number, intervals: number[]): number[] {
   return intervals.map((iv, idx) => {
     if (idx === 0) return rootMidi; // anchor root
-    const bump = Math.floor(Math.random() * 3) * 12; // 0, 12, or 24 semitones
+    const bump = Math.floor(Math.random() * 2) * 12; // 0 or 12 semitones (1 octave max)
     let n = rootMidi + iv + bump;
     while (n > SAMPLE_HI) n -= 12;
     while (n < SAMPLE_LO) n += 12;
@@ -155,13 +155,20 @@ export const triadExercise: Exercise<ChordPayload> = {
     return { root: rm, notes, payload: { chordId: chId }, pickId: chId };
   },
 
-  play(q, instId: InstrumentId) {
-    const gap = 0.3;
+  play(q, instId: InstrumentId, opts) {
+    const arpeggio = opts?.arpeggio ?? true;
     // Play in ascending order so spread voicings still arpeggiate low-to-high
     const ordered = [...q.notes].sort((a, b) => a - b);
-    ordered.forEach((n, i) => pm(instId, n, i * gap));
-    const chordAt = ordered.length * gap + 0.15;
-    ordered.forEach((n) => pm(instId, n, chordAt));
+
+    if (arpeggio) {
+      const gap = 0.3;
+      ordered.forEach((n, i) => pm(instId, n, i * gap));
+      const chordAt = ordered.length * gap + 0.15;
+      ordered.forEach((n) => pm(instId, n, chordAt));
+    } else {
+      // Stacked only — all notes at once
+      ordered.forEach((n) => pm(instId, n, 0));
+    }
   },
 
   answers(levelIndex): AnswerOption[] {

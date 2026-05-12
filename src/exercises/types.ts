@@ -62,7 +62,11 @@ export interface Exercise<TPayload = unknown> {
     spread?: boolean;
   }): Question & { payload: TPayload; pickId: string | number };
 
-  play(q: Question & { payload: TPayload }, instId: InstrumentId): void;
+  play(
+    q: Question & { payload: TPayload },
+    instId: InstrumentId,
+    opts?: { arpeggio?: boolean },
+  ): void;
 
   /** Static answer set for the level (used by most exercises). */
   answers(levelIndex: number): AnswerOption[];

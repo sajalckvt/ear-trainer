@@ -36,6 +36,7 @@ export interface UseQuizStateOptions {
   direction: 'asc' | 'desc';
   cadenceEnabled: boolean;
   spread: boolean;
+  arpeggio: boolean;
   instrument: InstrumentId;
 }
 
@@ -79,14 +80,14 @@ export function useQuizState(opts: UseQuizStateOptions) {
     setSession((s) => ({ ...s, question: q, feedback: null, quizPhase: 'playing' }));
 
     playCadence(60 + keyOffset, opts.instrument, opts.cadenceEnabled, () => {
-      opts.exercise.play(q, opts.instrument);
+      opts.exercise.play(q, opts.instrument, { arpeggio: opts.arpeggio });
     });
-  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.cadenceEnabled, opts.spread, opts.instrument]);
+  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.instrument]);
 
   const replay = useCallback(() => {
     if (!session.question) return;
-    opts.exercise.play(session.question, opts.instrument);
-  }, [session.question, opts.exercise, opts.instrument]);
+    opts.exercise.play(session.question, opts.instrument, { arpeggio: opts.arpeggio });
+  }, [session.question, opts.exercise, opts.instrument, opts.arpeggio]);
 
   const answer = useCallback(
     (guess: string | number) => {
