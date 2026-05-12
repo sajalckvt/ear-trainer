@@ -1,14 +1,14 @@
 /**
  * Chord identification exercise.
  *
- * Covers triads, 7th chords, and 9th-chord tensions across 5 levels:
- *   Beginner: maj / min
- *   Easy:     + dim, sus4
- *   Medium:   + aug, sus2, dom7
- *   Hard:     + maj7, min7  (the three core 7ths — your first decision
- *             after major-or-minor)
- *   Expert:   focus on 4- and 5-note jazz colours — maj7, min7, dom7,
- *             m7♭5, dim7, mMaj7, dom7♭9, dom7♯9
+ * 6 levels covering triads, 7th chords, and 9th-chord tensions:
+ *   Beginner:  maj, min
+ *   Easy:      + sus2, sus4, pwr (the no-3rd / ambiguous family)
+ *   Medium:    + dim, aug (tense triads)
+ *   Hard:      maj7, min7, dom7 (the consonant 4-note trio — first
+ *              decision after major-or-minor)
+ *   Difficult: m7♭5, dim7, mMaj7 (cinematic / jazz 4-note trio)
+ *   Expert:    dom7, dom7♭9, dom7♯9 (5-note dom-tension family)
  *
  * Spread voicing: when `opts.spread === true`, each chord tone gets a
  * random 0/1/2-octave bump (range-clamped to the soundfont). This forces
@@ -42,6 +42,11 @@ const CLOSE_PAIRS = new Set([
   'min_min7', 'min7_min',
   // sus pairs
   'sus2_sus4', 'sus4_sus2',
+  // no-third family (pwr is the most ambiguous — sounds like sus when arpeggiated)
+  'pwr_sus2', 'sus2_pwr',
+  'pwr_sus4', 'sus4_pwr',
+  'pwr_maj', 'maj_pwr',
+  'pwr_min', 'min_pwr',
   // 4-note 7th family confusions
   'dom7_maj7', 'maj7_dom7',
   'dom7_min7', 'min7_dom7',
@@ -65,6 +70,14 @@ const CHORD_HINTS: Record<string, string> = {
   'min7_min':           'Close! You heard the silky quality. Without the extra note it\'s starker and more direct.',
   'sus2_sus4':          'So close! Both feel suspended and open. Does it lean backward (2nd) or forward (4th)?',
   'sus4_sus2':          'So close! Both are suspended. Does it push forward, or float openly?',
+  'pwr_sus2':           'Close! Both feel open and ambiguous. A sus2 has a M2 between root and 5th — power chord has nothing in between.',
+  'sus2_pwr':           'Close! Both are open. The middle note here is a major 2nd above the root — pwr is empty in the middle.',
+  'pwr_sus4':           'Close! Both feel rooted on R+P5. A sus4 has the 4th between them — pwr has no middle note at all.',
+  'sus4_pwr':           'Close! Both lean on R+P5. The middle note here is the 4th — pwr leaves the middle empty.',
+  'pwr_maj':            'Close! Same R+5 backbone. A major has the M3 in the middle giving the bright colour.',
+  'maj_pwr':            'Close! Same R+5 backbone. Without the M3 in the middle, it\'s neither major nor minor — just neutral rock.',
+  'pwr_min':            'Close! Same R+5 backbone. A minor has the m3 in the middle giving the dark colour.',
+  'min_pwr':            'Close! Same R+5 backbone. Without the m3 in the middle, it\'s neither major nor minor — pure neutral.',
   'dom7_maj7':          'Close! You heard the 4-note quality. The top note is bluesy (♭7) vs. dreamy (M7).',
   'maj7_dom7':          'Close! Same richness — is that top note dreamy (M7) or bluesy (♭7)?',
   'dom7_min7':          'Close! Both are smoky 7ths. Bright major foundation, or dark minor?',

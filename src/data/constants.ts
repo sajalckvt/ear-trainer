@@ -216,6 +216,31 @@ export const CHORDS: Chord[] = [
     ],
   },
   {
+    id: 'pwr', n: 'Power Chord', sh: '5', co: '#71717a',
+    iv: [0, 7, 12], fm: 'R + P5 + R', fmd: 'P5 + P4',
+    ex: 'Open, neutral, rock — no 3rd so neither major nor minor',
+    songs: [
+      {
+        title: '"Smoke on the Water" — Deep Purple',
+        hint: 'The most famous riff in rock — power chord march R-♭3-4 then R-♭3-♭5-4',
+        phrase: [0, 3, 5, 0, 3, 6, 5],
+        bpm: 110,
+      },
+      {
+        title: '"Iron Man" — Black Sabbath',
+        hint: 'Crushing power-chord chug — root-5-octave heaviness',
+        phrase: [0, 7, 12, 7, 0],
+        bpm: 70,
+      },
+      {
+        title: '"Blitzkrieg Bop" — Ramones',
+        hint: 'Pure punk-rock power chords — three notes, full energy',
+        phrase: [0, 7, 12, 7],
+        bpm: 180,
+      },
+    ],
+  },
+  {
     id: 'maj7', n: 'Major 7th', sh: 'Maj7', co: '#06b6d4',
     iv: [0, 4, 7, 11], fm: 'R + M3 + P5 + M7', fmd: 'M3 + m3 + M3',
     ex: 'Dreamy, sophisticated, bittersweet',
@@ -437,11 +462,12 @@ export interface ChordLevel {
 }
 
 export const CH_LEVELS: ChordLevel[] = [
-  { n: 'Beginner', ch: ['maj', 'min'] },
-  { n: 'Easy',     ch: ['maj', 'min', 'dim', 'sus4'] },
-  { n: 'Medium',   ch: ['maj', 'min', 'dim', 'aug', 'sus2', 'sus4', 'dom7'] },
-  { n: 'Hard',     ch: ['maj', 'min', 'dim', 'aug', 'sus2', 'sus4', 'maj7', 'min7', 'dom7'] },
-  { n: 'Expert',   ch: ['maj7', 'min7', 'dom7', 'm7b5', 'dim7', 'mMaj7', 'dom7b9', 'dom7sharp9'] },
+  { n: 'Beginner',  ch: ['maj', 'min'] },
+  { n: 'Easy',      ch: ['maj', 'min', 'sus2', 'sus4', 'pwr'] },
+  { n: 'Medium',    ch: ['maj', 'min', 'sus2', 'sus4', 'pwr', 'dim', 'aug'] },
+  { n: 'Hard',      ch: ['maj7', 'min7', 'dom7'] },
+  { n: 'Difficult', ch: ['m7b5', 'dim7', 'mMaj7'] },
+  { n: 'Expert',    ch: ['dom7', 'dom7b9', 'dom7sharp9'] },
 ];
 
 export interface Instrument {
