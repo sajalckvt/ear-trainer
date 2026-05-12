@@ -290,6 +290,131 @@ export const CHORDS: Chord[] = [
       },
     ],
   },
+  {
+    id: 'm7b5', n: 'Half-Diminished', sh: 'm7♭5', co: '#a855f7',
+    iv: [0, 3, 6, 10], fm: 'R + m3 + ♭5 + m7', fmd: 'm3 + m3 + M3',
+    ex: 'Bittersweet, melancholy with tension — the iiø of minor keys',
+    songs: [
+      {
+        title: '"Cry Me a River" — Julie London',
+        hint: 'The iiø7 in the ii–V–i — heart of the song\'s sadness',
+        phrase: [0, 3, 6, 10, 6, 3, 0],
+        bpm: 80,
+      },
+      {
+        title: '"Yesterday" — Beatles (the "Suddenly" moment)',
+        hint: 'F♯ø7 lands under "Sud-den-ly" — that aching turn',
+        phrase: [0, 3, 6, 10],
+        bpm: 90,
+      },
+      {
+        title: '"Black Orpheus" (bossa standard)',
+        hint: 'iiø7 → V7 → i — definitive half-dim sound in minor jazz',
+        phrase: [10, 6, 3, 0],
+        bpm: 100,
+      },
+    ],
+  },
+  {
+    id: 'dim7', n: 'Diminished 7th', sh: 'dim7', co: '#dc2626',
+    iv: [0, 3, 6, 9], fm: 'R + m3 + ♭5 + ♭♭7', fmd: 'm3 + m3 + m3',
+    ex: 'Maximum tension — symmetrical, every stack of m3, classic horror chord',
+    songs: [
+      {
+        title: 'Silent-film "tied to the train tracks" sting',
+        hint: 'Symmetric chord of pure dread — every note a m3 apart',
+        phrase: [0, 3, 6, 9, 9, 6, 3, 0],
+        bpm: 90,
+      },
+      {
+        title: '"Michelle" — Beatles',
+        hint: 'The chromatic descent passes through dim7 on the turnaround',
+        phrase: [0, 3, 6, 9, 8],
+        bpm: 100,
+      },
+      {
+        title: 'Looney Tunes "uh-oh" stinger',
+        hint: 'Cartoon shock chord — pure dim7',
+        phrase: [0, 3, 6, 9],
+        bpm: 130,
+      },
+    ],
+  },
+  {
+    id: 'mMaj7', n: 'Minor-Major 7th', sh: 'mMaj7', co: '#0ea5e9',
+    iv: [0, 3, 7, 11], fm: 'R + m3 + P5 + M7', fmd: 'm3 + M3 + M3',
+    ex: 'Cinematic, James Bond — minor body with a bright leading-tone halo',
+    songs: [
+      {
+        title: 'James Bond theme — the iconic stinger',
+        hint: 'EmMaj7 — minor body, M7 on top, pure spy noir',
+        phrase: [0, 3, 7, 11, 11, 7, 3, 0],
+        bpm: 100,
+      },
+      {
+        title: '"Something" — Beatles (bridge — "You\'re asking me...")',
+        hint: 'CmMaj7 colour as the bridge melody climbs',
+        phrase: [11, 7, 3, 0],
+        bpm: 75,
+      },
+      {
+        title: '"Stairway to Heaven" — Led Zeppelin (intro)',
+        hint: 'The chromatic descending bass under Am implies mMaj7',
+        phrase: [0, 3, 7, 11, 10, 8, 7],
+        bpm: 70,
+      },
+    ],
+  },
+  {
+    id: 'dom7b9', n: 'Dom 7♭9', sh: '7♭9', co: '#ef4444',
+    iv: [0, 4, 7, 10, 13], fm: 'R + M3 + P5 + m7 + ♭9', fmd: 'dom7 + ♭9',
+    ex: 'Urgent, jaws-of-tension — V7 of minor, wants to resolve hard',
+    songs: [
+      {
+        title: '"Jaws" theme — John Williams',
+        hint: '♭9 is the most dissonant tension — the shark approaches',
+        phrase: [0, 13, 0, 13, 0, 13, 13],
+        bpm: 130,
+      },
+      {
+        title: '"Michelle" — Beatles ("I love you" turnaround)',
+        hint: 'V7♭9 of the iim — the classic French-chanson tension',
+        phrase: [0, 4, 7, 10, 13],
+        bpm: 100,
+      },
+      {
+        title: '"Black Orpheus" — V7♭9 going to i in minor',
+        hint: 'Bossa standard — leans on the ♭9 for that yearning resolve',
+        phrase: [13, 10, 7, 4, 0],
+        bpm: 110,
+      },
+    ],
+  },
+  {
+    id: 'dom7sharp9', n: 'Dom 7♯9 (Hendrix)', sh: '7♯9', co: '#f97316',
+    iv: [0, 4, 7, 10, 15], fm: 'R + M3 + P5 + m7 + ♯9', fmd: 'dom7 + ♯9',
+    ex: 'Spicy, bluesy bite — the "Hendrix chord", major + minor 3rd stacked',
+    songs: [
+      {
+        title: '"Purple Haze" — Jimi Hendrix',
+        hint: 'The whole song hinges on E7♯9 — major/minor ambiguity in one chord',
+        phrase: [0, 4, 7, 10, 15, 10, 7, 4],
+        bpm: 110,
+      },
+      {
+        title: '"Taxman" — Beatles',
+        hint: 'D7♯9 cuts through the verse — Hendrix-chord stab',
+        phrase: [0, 4, 7, 10, 15],
+        bpm: 130,
+      },
+      {
+        title: '"Foxy Lady" — Jimi Hendrix',
+        hint: 'F♯7♯9 ostinato — Hendrix\'s signature wah-wah colour',
+        phrase: [15, 10, 7, 4, 0],
+        bpm: 120,
+      },
+    ],
+  },
 ];
 
 export interface IntervalLevel {
@@ -313,10 +438,10 @@ export interface ChordLevel {
 
 export const CH_LEVELS: ChordLevel[] = [
   { n: 'Beginner', ch: ['maj', 'min'] },
-  { n: 'Easy',     ch: ['maj', 'min', 'sus4', 'dim'] },
-  { n: 'Medium',   ch: ['maj', 'min', 'dim', 'aug', 'sus2', 'sus4'] },
-  { n: 'Hard',     ch: ['maj', 'min', 'dim', 'aug', 'sus2', 'sus4', 'dom7'] },
-  { n: 'Expert',   ch: ['maj', 'min', 'dim', 'aug', 'sus2', 'sus4', 'maj7', 'min7', 'dom7'] },
+  { n: 'Easy',     ch: ['maj', 'min', 'dim', 'sus4'] },
+  { n: 'Medium',   ch: ['maj', 'min', 'dim', 'aug', 'sus2', 'sus4', 'dom7'] },
+  { n: 'Hard',     ch: ['maj', 'min', 'dim', 'aug', 'sus2', 'sus4', 'maj7', 'min7', 'dom7'] },
+  { n: 'Expert',   ch: ['maj7', 'min7', 'dom7', 'm7b5', 'dim7', 'mMaj7', 'dom7b9', 'dom7sharp9'] },
 ];
 
 export interface Instrument {

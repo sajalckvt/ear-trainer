@@ -133,6 +133,7 @@ body {
   display: flex; gap: 12px; justify-content: center; align-items: center;
   margin-bottom: 10px; font-size: 11px; color: #666;
 }
+.trow-sub { color: #444; font-weight: 400; margin-left: 4px; }
 .tog {
   position: relative; width: 32px; height: 18px; background: #2a2a3e;
   border-radius: 9px; cursor: pointer; display: inline-block;

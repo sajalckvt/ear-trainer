@@ -4,7 +4,7 @@ import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
 import type { InstrumentId } from '../audio/engine';
 import {
-  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, InstrumentPicker,
+  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, InstrumentPicker,
 } from '../components/Controls';
 import { ScoreBar } from '../components/ScoreBar';
 import { PlayArea } from '../components/PlayArea';
@@ -27,6 +27,8 @@ interface TrainPageProps {
   onKeyChange: (k: string) => void;
   cadenceEnabled: boolean;
   onCadenceChange: (v: boolean) => void;
+  spread: boolean;
+  onSpreadChange: (v: boolean) => void;
   instrument: InstrumentId;
   onInstrumentChange: (id: InstrumentId) => void;
   question: (Question & { pickId: string | number }) | null;
@@ -51,6 +53,7 @@ export function TrainPage(props: TrainPageProps) {
     visible, exercises, activeExercise, onExerciseChange,
     levelIndex, onLevelChange, direction, onDirectionChange,
     keyName, onKeyChange, cadenceEnabled, onCadenceChange,
+    spread, onSpreadChange,
     instrument, onInstrumentChange,
     question, feedback, quizPhase,
     correct, total, streak, best, nearMisses,
@@ -119,6 +122,7 @@ export function TrainPage(props: TrainPageProps) {
       />
       {activeExercise.id !== 'melody' && <KeyRow keyName={keyName} onChange={onKeyChange} />}
       {activeExercise.id !== 'melody' && <CadenceToggle on={cadenceEnabled} onChange={onCadenceChange} />}
+      {activeExercise.id === 'triad' && <SpreadToggle on={spread} onChange={onSpreadChange} />}
       <InstrumentPicker instrument={instrument} onChange={onInstrumentChange} />
 
       <ScoreBar
@@ -190,10 +194,9 @@ function Roadmap({ activeId }: { activeId: string }) {
   const phases = [
     { id: 'interval', n: 1, label: 'Intervals', color: '#6366f1' },
     { id: 'distance', n: 2, label: 'Distance',  color: '#8b5cf6' },
-    { id: 'triad',    n: 3, label: 'Triads',    color: '#c084fc' },
-    { id: 'chord7th', n: 4, label: '7ths',      color: '#e879f9' },
-    { id: 'melody',   n: 5, label: 'Melodies',  color: '#fb923c' },
-    { id: null,       n: 6, label: 'More soon', color: null },
+    { id: 'triad',    n: 3, label: 'Chords',    color: '#c084fc' },
+    { id: 'melody',   n: 4, label: 'Melodies',  color: '#fb923c' },
+    { id: null,       n: 5, label: 'More soon', color: null },
   ];
   return (
     <div className="roadmap">

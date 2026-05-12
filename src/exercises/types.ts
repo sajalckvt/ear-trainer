@@ -56,6 +56,10 @@ export interface Exercise<TPayload = unknown> {
     keyOffset: number;
     direction: 'asc' | 'desc';
     recentPicks: Array<string | number>;
+    /** If true, exercises that support it should voice chords across
+     *  multiple octaves rather than in close root position. Optional —
+     *  exercises that don't support it can ignore it. */
+    spread?: boolean;
   }): Question & { payload: TPayload; pickId: string | number };
 
   play(q: Question & { payload: TPayload }, instId: InstrumentId): void;

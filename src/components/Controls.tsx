@@ -141,6 +141,34 @@ export function CadenceToggle({
   );
 }
 
+// ─── Spread voicing toggle (chord exercise only) ──────────────────────────
+export function SpreadToggle({
+  on,
+  onChange,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="trow">
+      <span>
+        Spread voicing
+        <span className="trow-sub"> · chord tones across 1–2 octaves</span>
+      </span>
+      <span
+        role="switch"
+        aria-checked={on}
+        tabIndex={0}
+        className={`tog${on ? ' on' : ''}`}
+        onClick={() => onChange(!on)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') onChange(!on);
+        }}
+      />
+    </div>
+  );
+}
+
 // ─── Instrument picker ────────────────────────────────────────────────────
 export function InstrumentPicker({
   instrument,
