@@ -31,6 +31,27 @@ export const IVS: Interval[] = [
   { st: 14, n: 'Major 9th',  sh: 'M9', co: '#f97316', rf: 'Happy Birthday + an octave' },
 ];
 
+/**
+ * A song reference for a chord/interval/mode/progression.
+ * - title: how it appears in the feedback sheet (artist + song + the exact moment)
+ * - hint: optional one-liner explaining where in the song to listen
+ * - phrase: optional melodic hook as semitone offsets from the chord/scale root,
+ *           played sequentially. The exercise will transpose this to the
+ *           question's root and play it on the user's instrument.
+ * - bpm: tempo for the phrase (default 110). Note duration = 60/bpm seconds.
+ *
+ * Adding a reference: just add a new entry to the `songs: SongRef[]` array
+ * on the relevant chord in CHORDS / CHORDS_7TH / CHORDS_9TH. If you want it
+ * playable, add a `phrase` array of MIDI offsets from the root. Otherwise
+ * it'll show as a text-only mnemonic.
+ */
+export interface SongRef {
+  title: string;
+  hint?: string;
+  phrase?: number[];
+  bpm?: number;
+}
+
 export interface Chord {
   id: string;
   n: string;
@@ -39,9 +60,8 @@ export interface Chord {
   iv: number[];
   fm: string;
   fmd: string;
-  ex: string;       // feel description
-  song: string;     // primary song mnemonic
-  songAlt?: string; // alt song mnemonic
+  ex: string;            // feel description
+  songs: SongRef[];      // song mnemonics (extendable — contributors add more)
 }
 
 export const CHORDS: Chord[] = [
@@ -49,64 +69,226 @@ export const CHORDS: Chord[] = [
     id: 'maj', n: 'Major', sh: 'Maj', co: '#22c55e',
     iv: [0, 4, 7], fm: 'R + M3 + P5', fmd: 'M3 + m3',
     ex: 'Bright, happy, resolved',
-    song: '"She Loves You" — Beatles (yeah yeah yeah opening chord)',
-    songAlt: '"Let Her Go" — Passenger',
+    songs: [
+      {
+        title: '"Twinkle Twinkle Little Star"',
+        hint: 'Nursery-rhyme major — opening leap outlines R-5-6-5',
+        phrase: [0, 0, 7, 7, 9, 9, 7],
+        bpm: 130,
+      },
+      {
+        title: '"Let It Be" — Beatles',
+        hint: 'Opens on the I major (C), the most "home" sound there is',
+        phrase: [4, 4, 4, 4, 5, 7, 5, 4],
+        bpm: 100,
+      },
+      {
+        title: '"She Loves You" — Beatles',
+        hint: '"Yeah yeah yeah" — bright major triad in the chorus hook',
+        phrase: [7, 9, 7, 4],
+        bpm: 140,
+      },
+    ],
   },
   {
     id: 'min', n: 'Minor', sh: 'Min', co: '#3b82f6',
     iv: [0, 3, 7], fm: 'R + m3 + P5', fmd: 'm3 + M3',
     ex: 'Dark, melancholic, inward',
-    song: '"Eleanor Rigby" — Beatles (Em throughout, famously dark)',
-    songAlt: '"While My Guitar Gently Weeps" — Beatles',
+    songs: [
+      {
+        title: '"Greensleeves" (traditional)',
+        hint: 'The opening rise R-m3-4-5 is pure minor melancholy',
+        phrase: [0, 3, 5, 7, 8, 7, 5, 3],
+        bpm: 110,
+      },
+      {
+        title: '"Eleanor Rigby" — Beatles',
+        hint: 'Em throughout — "Ah, look at all the lonely people"',
+        phrase: [7, 7, 7, 7, 3, 3, 3, 0],
+        bpm: 130,
+      },
+      {
+        title: '"Stairway to Heaven" — Led Zeppelin',
+        hint: 'Am opening arpeggio — R-m3-5 descending',
+        phrase: [0, 3, 7, 10, 7, 3, 0],
+        bpm: 80,
+      },
+    ],
   },
   {
     id: 'dim', n: 'Diminished', sh: 'Dim', co: '#ef4444',
     iv: [0, 3, 6], fm: 'R + m3 + TT', fmd: 'm3 + m3',
     ex: 'Tense, unstable, danger',
-    song: 'Silent-film villain music — the "tied to the train tracks" moment',
-    songAlt: '"Be Prepared" — The Lion King (Scar\'s march)',
+    songs: [
+      {
+        title: 'Silent-film villain "tied to the train tracks" sting',
+        hint: 'The classic dum-dum-DUM! — top note is the tritone',
+        phrase: [0, 3, 6, 6],
+        bpm: 90,
+      },
+      {
+        title: 'The Simpsons theme (the "Simp-sons" leap)',
+        hint: 'That eerie leap from C to F♯ — a tritone, the heart of dim',
+        phrase: [0, 6, 5, 3, 0],
+        bpm: 130,
+      },
+      {
+        title: '"Be Prepared" — The Lion King (Scar\'s march)',
+        hint: 'Dim chord stabs under Scar\'s villain monologue',
+        phrase: [0, 3, 6, 3, 0],
+        bpm: 100,
+      },
+    ],
   },
   {
     id: 'aug', n: 'Augmented', sh: 'Aug', co: '#f97316',
     iv: [0, 4, 8], fm: 'R + M3 + m6', fmd: 'M3 + M3',
     ex: 'Mysterious, dreamlike, unsettled',
-    song: '"Oh! Darling" — Beatles (opening vocal line)',
-    songAlt: 'James Bond theme stinger / "Goodbye Yellow Brick Road" — Elton John',
+    songs: [
+      {
+        title: '"Oh! Darling" — Beatles (opening vocal line)',
+        hint: 'The E+ stab right at "Oh! Darling, please believe me"',
+        phrase: [0, 4, 8, 4, 0],
+        bpm: 80,
+      },
+      {
+        title: 'James Bond theme stinger',
+        hint: 'The iconic "dun-dun-DUNNN" — augmented chord wobble',
+        phrase: [0, 4, 8, 8],
+        bpm: 100,
+      },
+      {
+        title: '"Mr. Blue Sky" — ELO (intro chord)',
+        hint: 'That floating, slightly unsettled feel before the sun comes out',
+        phrase: [0, 4, 8],
+        bpm: 90,
+      },
+    ],
   },
   {
     id: 'sus2', n: 'Sus 2', sh: 'Sus2', co: '#14b8a6',
     iv: [0, 2, 7], fm: 'R + M2 + P5', fmd: 'M2 + P4',
     ex: 'Open, floating, no third so no major/minor feel',
-    song: '"Wonderwall" — Oasis (built almost entirely on sus2/sus4)',
-    songAlt: '"The Scientist" — Coldplay',
+    songs: [
+      {
+        title: '"Wonderwall" — Oasis',
+        hint: 'The famous opening — sus2 shapes ringing out, no thirds',
+        phrase: [0, 2, 7, 2, 0],
+        bpm: 90,
+      },
+      {
+        title: '"The Scientist" — Coldplay',
+        hint: 'Piano intro — open sus2 voicings, that "floating" colour',
+        phrase: [0, 2, 7],
+        bpm: 75,
+      },
+      {
+        title: '"Pumped Up Kicks" — Foster the People',
+        hint: 'Verse riff — sus2 ambiguity, neither bright nor dark',
+        phrase: [0, 2, 7, 2],
+        bpm: 130,
+      },
+    ],
   },
   {
     id: 'sus4', n: 'Sus 4', sh: 'Sus4', co: '#a855f7',
     iv: [0, 5, 7], fm: 'R + P4 + P5', fmd: 'P4 + M2',
     ex: 'Suspended, leans forward, wants to resolve',
-    song: '"A Hard Day\'s Night" — Beatles (the famous opening chord has a Sus4)',
-    songAlt: '"Creep" — Radiohead (the sus4 → major resolution)',
+    songs: [
+      {
+        title: '"A Hard Day\'s Night" — Beatles (opening chord)',
+        hint: 'The most famous sus4 in pop — that big jangly slap',
+        phrase: [0, 5, 7, 0],
+        bpm: 130,
+      },
+      {
+        title: '"Pinball Wizard" — The Who',
+        hint: 'Bsus4 → B intro — feel the lean-and-resolve',
+        phrase: [0, 5, 7, 5, 4],
+        bpm: 130,
+      },
+      {
+        title: 'Big Ben chime (Westminster Quarters)',
+        hint: 'The first chime hits the 4 over the root — pure sus4 feel',
+        phrase: [7, 5, 2, 0],
+        bpm: 60,
+      },
+    ],
   },
   {
     id: 'maj7', n: 'Major 7th', sh: 'Maj7', co: '#06b6d4',
     iv: [0, 4, 7, 11], fm: 'R + M3 + P5 + M7', fmd: 'M3 + m3 + M3',
     ex: 'Dreamy, sophisticated, bittersweet',
-    song: '"Something" — Beatles (Cmaj7 in the chorus)',
-    songAlt: '"Here Comes the Sun" — Beatles',
+    songs: [
+      {
+        title: '"Something" — Beatles',
+        hint: 'Cmaj7 on the opening — that bittersweet glow',
+        phrase: [11, 7, 4, 0],
+        bpm: 70,
+      },
+      {
+        title: '"Here Comes the Sun" — Beatles (intro arpeggio)',
+        hint: 'Dmaj7 chord shimmer — the sun rising in chord form',
+        phrase: [0, 4, 7, 11, 7, 4],
+        bpm: 130,
+      },
+      {
+        title: '"Girl from Ipanema" — bossa nova standard',
+        hint: 'Fmaj7 throughout the verse — definitive dreamy major 7',
+        phrase: [0, 4, 7, 11],
+        bpm: 110,
+      },
+    ],
   },
   {
     id: 'min7', n: 'Minor 7th', sh: 'Min7', co: '#8b5cf6',
     iv: [0, 3, 7, 10], fm: 'R + m3 + P5 + m7', fmd: 'm3 + M3 + m3',
     ex: 'Smooth, soulful, relaxed minor',
-    song: '"Come Together" — Beatles (the riff outlines Am7 perfectly)',
-    songAlt: '"Superstition" — Stevie Wonder',
+    songs: [
+      {
+        title: '"Come Together" — Beatles',
+        hint: 'The riff outlines Am7 — silky minor with that ♭7 on top',
+        phrase: [0, 7, 10, 7, 3, 0],
+        bpm: 85,
+      },
+      {
+        title: '"Superstition" — Stevie Wonder',
+        hint: 'Em7 clavinet riff — funk minor 7 at its purest',
+        phrase: [0, 3, 7, 10, 7, 3],
+        bpm: 100,
+      },
+      {
+        title: '"Breezin\'" — George Benson',
+        hint: 'Jazz/soul guitar — min7 chord movement throughout',
+        phrase: [0, 10, 7, 3, 0],
+        bpm: 100,
+      },
+    ],
   },
   {
     id: 'dom7', n: 'Dominant 7th', sh: 'Dom7', co: '#f43f5e',
     iv: [0, 4, 7, 10], fm: 'R + M3 + P5 + m7', fmd: 'M3 + m3 + m3',
     ex: 'Bluesy, wants to resolve, tension + drive',
-    song: '"Twist and Shout" — Beatles ("Shake it up baby" — the whole song lives on Dom7)',
-    songAlt: 'Any 12-bar blues (the I, IV, and V are all Dom7)',
+    songs: [
+      {
+        title: '"Twist and Shout" — Beatles',
+        hint: 'The whole song lives on D7 → G7 → A7 — pure dominant 7 energy',
+        phrase: [0, 4, 7, 10, 7, 4],
+        bpm: 130,
+      },
+      {
+        title: '"Hound Dog" — Elvis Presley',
+        hint: 'Classic 12-bar blues — every chord (I, IV, V) is a dom7',
+        phrase: [0, 4, 7, 10, 10, 7, 4, 0],
+        bpm: 170,
+      },
+      {
+        title: '"Birthday" — Beatles (the bluesy stomp)',
+        hint: 'A7 riff hammering — bluesy major + ♭7 tension',
+        phrase: [0, 7, 10, 7, 4, 0],
+        bpm: 140,
+      },
+    ],
   },
 ];
 

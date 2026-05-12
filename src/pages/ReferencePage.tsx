@@ -134,7 +134,7 @@ function ChordReferenceSheet({ instrument }: { instrument: InstrumentId }) {
             <div className="rcn">
               <span className="rn">{ch.n}</span>
               <span className="rs">{ch.ex}</span>
-              <span className="formula">{ch.song}</span>
+              <span className="formula">{ch.songs[0]?.title ?? ''}</span>
             </div>
             <div
               className="rcs"

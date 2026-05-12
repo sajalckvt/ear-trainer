@@ -16,11 +16,30 @@ export interface AnswerOption {
   hint?: string;
 }
 
+/**
+ * A song reference shown in the feedback sheet. Each ref has a title
+ * (and optional one-liner hint), and an optional playable hook so the
+ * user can tap to hear the actual melodic phrase from that song.
+ * The phrase is played on the user's currently selected instrument,
+ * transposed so the song's tonic equals the question's root.
+ */
+export interface SongRefPlayable {
+  title: string;
+  hint?: string;
+  /** If defined, FeedbackSheet shows a ▶ button that calls this with the
+   *  user's current instrument and the question's root MIDI value. */
+  play?: (instId: InstrumentId, rootMidi: number) => void;
+}
+
 export interface FeedbackInfo {
   label: string;
   color: string;
+  /** Deprecated — use songRefs. Kept for backwards-compat with exercises
+   *  that haven't migrated yet (interval, distance, melody). */
   reference?: string;
   altReference?: string;
+  /** New: playable song references. Preferred over reference/altReference. */
+  songRefs?: SongRefPlayable[];
   demoPlay?: (instId: InstrumentId) => void;
 }
 

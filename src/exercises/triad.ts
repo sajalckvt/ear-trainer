@@ -1,6 +1,6 @@
 import { CHORDS, CH_LEVELS, SAMPLE_LO, SAMPLE_HI } from '../data/constants';
-import { pm, type InstrumentId } from '../audio/engine';
-import type { Exercise, AnswerOption } from './types';
+import { pm, playPhrase, type InstrumentId } from '../audio/engine';
+import type { Exercise, AnswerOption, SongRefPlayable } from './types';
 
 interface TriadPayload { chordId: string; }
 
@@ -104,11 +104,17 @@ export const triadExercise: Exercise<TriadPayload> = {
 
   feedback(answerId) {
     const ch = CHORDS.find((c) => c.id === (answerId as string))!;
+    const songRefs: SongRefPlayable[] = ch.songs.map((s) => ({
+      title: s.title,
+      hint: s.hint,
+      play: s.phrase
+        ? (instId, rootMidi) => playPhrase(instId, rootMidi, s.phrase!, s.bpm)
+        : undefined,
+    }));
     return {
       label: ch.n,
       color: ch.co,
-      reference: ch.song,
-      altReference: ch.songAlt,
+      songRefs,
       demoPlay: CHORD_DEMOS[ch.id],
     };
   },

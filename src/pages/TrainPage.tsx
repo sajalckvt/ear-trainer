@@ -173,6 +173,7 @@ export function TrainPage(props: TrainPageProps) {
               correctInfo={feedbackInfo}
               hint={hint}
               instrument={instrument}
+              questionRoot={question?.root ?? 60}
               onNext={handleNext}
               onDismiss={() => setSheetDismissed(true)}
             />
@@ -190,8 +191,9 @@ function Roadmap({ activeId }: { activeId: string }) {
     { id: 'interval', n: 1, label: 'Intervals', color: '#6366f1' },
     { id: 'distance', n: 2, label: 'Distance',  color: '#8b5cf6' },
     { id: 'triad',    n: 3, label: 'Triads',    color: '#c084fc' },
-    { id: 'melody',   n: 4, label: 'Melodies',  color: '#fb923c' },
-    { id: null,       n: 5, label: 'More soon', color: null },
+    { id: 'chord7th', n: 4, label: '7ths',      color: '#e879f9' },
+    { id: 'melody',   n: 5, label: 'Melodies',  color: '#fb923c' },
+    { id: null,       n: 6, label: 'More soon', color: null },
   ];
   return (
     <div className="roadmap">

@@ -135,3 +135,30 @@ export function pn(instId: InstrumentId, note: string, dl = 0): void {
 export function pm(instId: InstrumentId, midi: number, dl = 0): void {
   pn(instId, m2n(midi), dl);
 }
+
+/**
+ * Play a phrase as semitone offsets from a root MIDI value, at a given tempo.
+ * Used by song references in the FeedbackSheet to play the actual hook
+ * from the song, transposed to whatever key the question was in.
+ * Notes are kept within the soundfont range A3–G5 (MIDI 57–79) by
+ * shifting whole octaves down (or up) on a per-note basis.
+ *
+ * @param instId    The instrument to play on
+ * @param rootMidi  The MIDI value of the phrase's root (0 in the offsets)
+ * @param offsets   Semitone offsets from root, one per note in the phrase
+ * @param bpm       Tempo for the phrase (default 110). Each note is 1 beat.
+ */
+export function playPhrase(
+  instId: InstrumentId,
+  rootMidi: number,
+  offsets: number[],
+  bpm = 110,
+): void {
+  const beat = 60 / bpm;
+  offsets.forEach((off, i) => {
+    let n = rootMidi + off;
+    while (n > 79) n -= 12;
+    while (n < 57) n += 12;
+    pm(instId, n, i * beat);
+  });
+}
