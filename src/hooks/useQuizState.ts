@@ -34,6 +34,7 @@ export interface UseQuizStateOptions {
   levelIndex: number;
   keyName: string;
   direction: 'asc' | 'desc';
+  distanceDirection: 'asc' | 'desc' | 'both';
   cadenceEnabled: boolean;
   spread: boolean;
   arpeggio: boolean;
@@ -73,6 +74,7 @@ export function useQuizState(opts: UseQuizStateOptions) {
       direction: opts.direction,
       recentPicks: historyRef.current,
       spread: opts.spread,
+      distanceDirection: opts.distanceDirection,
     });
     historyRef.current.push(q.pickId);
     if (historyRef.current.length > 10) historyRef.current.shift();
@@ -82,7 +84,7 @@ export function useQuizState(opts: UseQuizStateOptions) {
     playCadence(60 + keyOffset, opts.instrument, opts.cadenceEnabled, () => {
       opts.exercise.play(q, opts.instrument, { arpeggio: opts.arpeggio });
     });
-  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.instrument]);
+  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.distanceDirection, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.instrument]);
 
   const replay = useCallback(() => {
     if (!session.question) return;

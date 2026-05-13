@@ -93,6 +93,31 @@ export function LevelDirRow({
   );
 }
 
+// ─── Distance direction toggle ────────────────────────────────────────────
+export function DistanceDirectionToggle({
+  value,
+  onChange,
+}: {
+  value: 'asc' | 'desc' | 'both';
+  onChange: (v: 'asc' | 'desc' | 'both') => void;
+}) {
+  return (
+    <div className="ctrl-row">
+      <div className="pg">
+        {(['asc', 'desc', 'both'] as const).map((d) => (
+          <button
+            key={d}
+            className={`pill${value === d ? ' on' : ''}`}
+            onClick={() => onChange(d)}
+          >
+            {d === 'asc' ? '↑ Asc' : d === 'desc' ? '↓ Desc' : '↕ Both'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Key selector ─────────────────────────────────────────────────────────
 export function KeyRow({
   keyName,

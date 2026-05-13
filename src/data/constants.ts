@@ -29,6 +29,9 @@ export const IVS: Interval[] = [
   { st: 12, n: 'Octave',     sh: 'P8', co: '#6d28d9', rf: 'Somewhere Over the Rainbow', al: 'Bali Hai — South Pacific' },
   { st: 13, n: 'Minor 9th',  sh: 'm9', co: '#ef4444', rf: 'Jaws + an octave' },
   { st: 14, n: 'Major 9th',  sh: 'M9', co: '#f97316', rf: 'Happy Birthday + an octave' },
+  { st: 15, n: 'Minor 10th', sh: 'm10',co: '#eab308', rf: 'Minor 3rd + an octave', al: 'Like a chord stretched apart' },
+  { st: 16, n: 'Major 10th', sh: 'M10',co: '#22c55e', rf: 'Major 3rd + an octave', al: 'Stride piano left hand reaches a 10th' },
+  { st: 17, n: 'Perfect 11th',sh: 'P11',co: '#14b8a6', rf: 'Perfect 4th + an octave', al: 'Here Comes the Bride spread over 2 octaves' },
 ];
 
 /**
@@ -453,7 +456,8 @@ export const IV_LEVELS: IntervalLevel[] = [
   { n: 'Easy',     iv: [0, 3, 4, 5, 7, 12], cross: false },
   { n: 'Medium',   iv: [0, 2, 3, 4, 5, 6, 7, 9, 12], cross: false },
   { n: 'Hard',     iv: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], cross: false },
-  { n: 'Expert',   iv: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], cross: true },
+  // Expert: second-octave intervals only — stretches the ear beyond P8
+  { n: 'Expert',   iv: [12, 13, 14, 15, 16, 17], cross: true },
 ];
 
 export interface ChordLevel {

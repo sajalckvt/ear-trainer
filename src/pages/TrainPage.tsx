@@ -4,7 +4,7 @@ import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
 import type { InstrumentId } from '../audio/engine';
 import {
-  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, InstrumentPicker,
+  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, DistanceDirectionToggle, InstrumentPicker,
 } from '../components/Controls';
 import { ScoreBar } from '../components/ScoreBar';
 import { PlayArea } from '../components/PlayArea';
@@ -32,6 +32,8 @@ interface TrainPageProps {
   onSpreadChange: (v: boolean) => void;
   arpeggio: boolean;
   onArpeggioChange: (v: boolean) => void;
+  distanceDirection: 'asc' | 'desc' | 'both';
+  onDistanceDirectionChange: (v: 'asc' | 'desc' | 'both') => void;
   instrument: InstrumentId;
   onInstrumentChange: (id: InstrumentId) => void;
   question: (Question & { pickId: string | number }) | null;
@@ -58,6 +60,7 @@ export function TrainPage(props: TrainPageProps) {
     keyName, onKeyChange, cadenceEnabled, onCadenceChange,
     spread, onSpreadChange,
     arpeggio, onArpeggioChange,
+    distanceDirection, onDistanceDirectionChange,
     instrument, onInstrumentChange,
     question, feedback, quizPhase,
     correct, total, streak, best, nearMisses,
@@ -124,6 +127,9 @@ export function TrainPage(props: TrainPageProps) {
         showDirection={activeExercise.usesDirection}
         direction={direction} onDirectionChange={onDirectionChange}
       />
+      {activeExercise.id === 'distance' && (
+        <DistanceDirectionToggle value={distanceDirection} onChange={onDistanceDirectionChange} />
+      )}
       {activeExercise.id !== 'melody' && <KeyRow keyName={keyName} onChange={onKeyChange} />}
       {activeExercise.id !== 'melody' && <CadenceToggle on={cadenceEnabled} onChange={onCadenceChange} />}
       {activeExercise.id === 'triad' && <SpreadToggle on={spread} onChange={onSpreadChange} />}

@@ -60,6 +60,9 @@ export interface Exercise<TPayload = unknown> {
      *  multiple octaves rather than in close root position. Optional —
      *  exercises that don't support it can ignore it. */
     spread?: boolean;
+    /** Distance exercise direction — separate from `direction` because
+     *  Distance also supports 'both' (the original random behaviour). */
+    distanceDirection?: 'asc' | 'desc' | 'both';
   }): Question & { payload: TPayload; pickId: string | number };
 
   play(
