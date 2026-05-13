@@ -1,18 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { m2d } from '../audio/theory';
 import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
 import type { InstrumentId } from '../audio/engine';
 import {
-  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, InstrumentPicker,
+  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, DistanceDirectionToggle, InstrumentPicker,
 } from '../components/Controls';
 import { ScoreBar } from '../components/ScoreBar';
 import { PlayArea } from '../components/PlayArea';
 import { AnswerGrid } from '../components/AnswerGrid';
+import { ProgressionAnswerBuilder } from '../components/ProgressionAnswerBuilder';
 import { Piano } from '../components/Piano';
 import { Fretboard } from '../components/Fretboard';
 import { FeedbackSheet } from '../components/FeedbackSheet';
 import { MelodyBoard } from '../components/MelodyBoard';
+import {
+  CHORD_STEP,
+  progressionChordNotes,
+  playProgressionChord,
+  type ProgressionPayload,
+} from '../exercises/progression';
 
 interface TrainPageProps {
   visible: boolean;
@@ -27,6 +34,12 @@ interface TrainPageProps {
   onKeyChange: (k: string) => void;
   cadenceEnabled: boolean;
   onCadenceChange: (v: boolean) => void;
+  spread: boolean;
+  onSpreadChange: (v: boolean) => void;
+  arpeggio: boolean;
+  onArpeggioChange: (v: boolean) => void;
+  distanceDirection: 'asc' | 'desc' | 'both';
+  onDistanceDirectionChange: (v: 'asc' | 'desc' | 'both') => void;
   instrument: InstrumentId;
   onInstrumentChange: (id: InstrumentId) => void;
   question: (Question & { pickId: string | number }) | null;
@@ -51,6 +64,9 @@ export function TrainPage(props: TrainPageProps) {
     visible, exercises, activeExercise, onExerciseChange,
     levelIndex, onLevelChange, direction, onDirectionChange,
     keyName, onKeyChange, cadenceEnabled, onCadenceChange,
+    spread, onSpreadChange,
+    arpeggio, onArpeggioChange,
+    distanceDirection, onDistanceDirectionChange,
     instrument, onInstrumentChange,
     question, feedback, quizPhase,
     correct, total, streak, best, nearMisses,
@@ -59,6 +75,79 @@ export function TrainPage(props: TrainPageProps) {
   } = props;
 
   const [sheetDismissed, setSheetDismissed] = useState(false);
+
+  // ─── Progression playback animation ───────────────────────────────────────
+  // For the progression exercise, we step a `progChordIdx` index forward in
+  // sync with audio playback so piano/fretboard/slots all highlight only the
+  // chord that's currently sounding (with a dim "trail" on the previous one).
+  //
+  // After answer, the user can click any slot to set this index manually and
+  // re-hear just that chord — the step-through review.
+  const [progChordIdx, setProgChordIdx] = useState<number | null>(null);
+  const progTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearProgTimers = () => {
+    progTimersRef.current.forEach(clearTimeout);
+    progTimersRef.current = [];
+  };
+
+  /** Schedule the chord-index animation. cadenceDelay matches the audio delay
+   *  introduced by playCadence (1800ms when enabled, 0 otherwise). */
+  const startProgressionAnimation = (chordCount: number, cadenceDelay: number) => {
+    clearProgTimers();
+    setProgChordIdx(null);  // clear immediately
+    for (let i = 0; i < chordCount; i++) {
+      const t = setTimeout(
+        () => setProgChordIdx(i),
+        cadenceDelay + i * CHORD_STEP * 1000,
+      );
+      progTimersRef.current.push(t);
+    }
+  };
+
+  // Cancel any in-flight animation when the question changes or unmounts
+  useEffect(() => () => clearProgTimers(), []);
+  useEffect(() => {
+    // When the question id changes (new question), reset and stop any leftover timers
+    clearProgTimers();
+    setProgChordIdx(null);
+  }, [question?.pickId]);
+
+  // The animation for the first play of a new question is started by the
+  // useEffect below (deps on question.pickId). handleReplay needs its own
+  // call since replays don't generate a new question.
+  const handleReplay = () => {
+    onReplay();
+    if (activeExercise.id === 'progression' && question) {
+      const chordCount = (question.payload as ProgressionPayload).chordIds.length;
+      const cadenceDelay = cadenceEnabled ? 1800 : 0;
+      startProgressionAnimation(chordCount, cadenceDelay);
+    }
+  };
+
+  // When a new progression question arrives, auto-start its animation.
+  // (For onStart the question is freshly generated inside the hook; we
+  // detect this via the question id changing while quizPhase === 'playing'.)
+  useEffect(() => {
+    if (activeExercise.id !== 'progression') return;
+    if (quizPhase !== 'playing' || !question) return;
+    const chordCount = (question.payload as ProgressionPayload).chordIds.length;
+    const cadenceDelay = cadenceEnabled ? 1800 : 0;
+    startProgressionAnimation(chordCount, cadenceDelay);
+    // The effect deliberately only depends on the question id + exercise id —
+    // we want it to fire once per new question, not on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question?.pickId, activeExercise.id]);
+
+  // Step-through (post-answer): clicking a slot replays that chord and
+  // sets the highlight index. Only valid once the answer is locked in.
+  const handleSlotReview = (idx: number) => {
+    if (!question) return;
+    if (quizPhase !== 'answered') return;
+    clearProgTimers();
+    setProgChordIdx(idx);
+    playProgressionChord(question as { payload: ProgressionPayload }, idx, instrument);
+  };
 
   // Reset sheet dismissed state when a new question starts
   const handleNext = () => {
@@ -87,16 +176,60 @@ export function TrainPage(props: TrainPageProps) {
   // Piano/fretboard highlights
   const highlights: Record<number, string> = {};
   if (question) {
-    highlights[question.root] = '#6366f1';
-    if (quizPhase === 'answered' && feedbackInfo) {
-      const accent = feedbackInfo.color;
-      question.notes.forEach((n) => { if (n !== question.root) highlights[n] = accent; });
+    if (activeExercise.id === 'progression') {
+      // ── Progression mode ─────────────────────────────────────────────
+      // Before the user answers, we deliberately HIDE the chord notes —
+      // otherwise they could just read the chord off the piano keys/labels
+      // and there's nothing to identify. We only show the key tonic so the
+      // user keeps the key in view. The active slot in the slot bar still
+      // pulses to indicate which chord is currently playing.
+      //
+      // After answer (quizPhase === 'answered'), the full chord notes are
+      // revealed and the step-through review is enabled.
+      const payload = question.payload as ProgressionPayload;
+      if (quizPhase === 'answered' && progChordIdx !== null) {
+        const dim = '#3a3a5e';
+        const live = '#a78bfa';
+        if (progChordIdx > 0) {
+          const prev = progressionChordNotes(
+            question as { payload: ProgressionPayload }, progChordIdx - 1,
+          );
+          prev.forEach((n) => { highlights[n] = dim; });
+        }
+        const curr = progressionChordNotes(
+          question as { payload: ProgressionPayload }, progChordIdx,
+        );
+        curr.forEach((n) => { highlights[n] = live; });
+      }
+      // Key tonic always shown so the user keeps the key in view
+      highlights[payload.keyRoot] = highlights[payload.keyRoot] ?? '#6366f1';
+    } else {
+      // ── Standard exercises: original behaviour
+      highlights[question.root] = '#6366f1';
+      if (quizPhase === 'answered' && feedbackInfo) {
+        const accent = feedbackInfo.color;
+        question.notes.forEach((n) => { if (n !== question.root) highlights[n] = accent; });
+      }
     }
   }
 
   let pianoLabel = '';
   let pianoLabelColor = '#6366f1';
-  if (question && quizPhase === 'answered') {
+  if (activeExercise.id === 'progression' && question) {
+    const payload = question.payload as ProgressionPayload;
+    if (quizPhase === 'answered' && progChordIdx !== null) {
+      // Post-answer: show the chord identity in the label
+      const chId = payload.chordIds[progChordIdx];
+      pianoLabel = `Chord ${progChordIdx + 1} of ${payload.chordIds.length} · ${chId}`;
+      pianoLabelColor = '#a78bfa';
+    } else if (progChordIdx !== null) {
+      // During playback (pre-answer): hint at progress without revealing the chord
+      pianoLabel = `Chord ${progChordIdx + 1} of ${payload.chordIds.length}`;
+      pianoLabelColor = '#a78bfa';
+    } else {
+      pianoLabel = question.displayLabel ?? `Key: ${m2d(payload.keyRoot)}`;
+    }
+  } else if (question && quizPhase === 'answered') {
     pianoLabel = question.notes.map(m2d).join(' ');
     pianoLabelColor = feedbackInfo?.color ?? '#6366f1';
   } else if (question) {
@@ -117,8 +250,13 @@ export function TrainPage(props: TrainPageProps) {
         showDirection={activeExercise.usesDirection}
         direction={direction} onDirectionChange={onDirectionChange}
       />
+      {activeExercise.id === 'distance' && (
+        <DistanceDirectionToggle value={distanceDirection} onChange={onDistanceDirectionChange} />
+      )}
       {activeExercise.id !== 'melody' && <KeyRow keyName={keyName} onChange={onKeyChange} />}
       {activeExercise.id !== 'melody' && <CadenceToggle on={cadenceEnabled} onChange={onCadenceChange} />}
+      {activeExercise.id === 'triad' && <SpreadToggle on={spread} onChange={onSpreadChange} />}
+      {activeExercise.id === 'triad' && <ArpeggioToggle on={arpeggio} onChange={onArpeggioChange} />}
       <InstrumentPicker instrument={instrument} onChange={onInstrumentChange} />
 
       <ScoreBar
@@ -152,17 +290,30 @@ export function TrainPage(props: TrainPageProps) {
             correctLabel={quizPhase === 'answered' ? correctLabel : null}
             feedbackInfo={quizPhase === 'answered' ? feedbackInfo : null}
             onStart={onStart}
-            onReplay={onReplay}
+            onReplay={handleReplay}
             onNext={handleNext}
           />
 
-          <AnswerGrid
-            answers={answers}
-            correctId={quizPhase === 'answered' ? correctId : null}
-            guessedId={feedback?.guess ?? null}
-            locked={quizPhase === 'answered'}
-            onGuess={onGuess}
-          />
+          {activeExercise.id === 'progression' && question ? (
+            <ProgressionAnswerBuilder
+              answers={answers}
+              slotCount={(question.payload as { chordIds: string[] }).chordIds.length}
+              guessedString={feedback?.guess !== undefined ? String(feedback.guess) : null}
+              correctString={quizPhase === 'answered' && correctId !== null ? String(correctId) : null}
+              locked={quizPhase === 'answered'}
+              activeChordIdx={progChordIdx}
+              onSubmit={onGuess}
+              onReviewSlot={handleSlotReview}
+            />
+          ) : (
+            <AnswerGrid
+              answers={answers}
+              correctId={quizPhase === 'answered' ? correctId : null}
+              guessedId={feedback?.guess ?? null}
+              locked={quizPhase === 'answered'}
+              onGuess={onGuess}
+            />
+          )}
 
           <Piano highlights={highlights} headerLabel={pianoLabel} headerColor={pianoLabelColor} />
           <Fretboard highlights={highlights} />
@@ -173,6 +324,7 @@ export function TrainPage(props: TrainPageProps) {
               correctInfo={feedbackInfo}
               hint={hint}
               instrument={instrument}
+              questionRoot={question?.root ?? 60}
               onNext={handleNext}
               onDismiss={() => setSheetDismissed(true)}
             />
@@ -187,11 +339,12 @@ export function TrainPage(props: TrainPageProps) {
 
 function Roadmap({ activeId }: { activeId: string }) {
   const phases = [
-    { id: 'interval', n: 1, label: 'Intervals', color: '#6366f1' },
-    { id: 'distance', n: 2, label: 'Distance',  color: '#8b5cf6' },
-    { id: 'triad',    n: 3, label: 'Triads',    color: '#c084fc' },
-    { id: 'melody',   n: 4, label: 'Melodies',  color: '#fb923c' },
-    { id: null,       n: 5, label: 'More soon', color: null },
+    { id: 'interval',    n: 1, label: 'Intervals',    color: '#6366f1' },
+    { id: 'distance',    n: 2, label: 'Distance',     color: '#8b5cf6' },
+    { id: 'triad',       n: 3, label: 'Chords',       color: '#c084fc' },
+    { id: 'progression', n: 4, label: 'Progressions', color: '#e879f9' },
+    { id: 'melody',      n: 5, label: 'Melodies',     color: '#fb923c' },
+    { id: null,          n: 6, label: 'More soon',    color: null },
   ];
   return (
     <div className="roadmap">

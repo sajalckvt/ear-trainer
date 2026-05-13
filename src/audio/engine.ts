@@ -111,13 +111,34 @@ function decodeNote(instId: InstrumentId, note: string): Promise<AudioBuffer | n
   });
 }
 
-function playBuf(audioBuf: AudioBuffer): void {
+/**
+ * Per-note gain compensation. The soundfont samples aren't perfectly
+ * level-matched across the keyboard — some notes (Ab4, A4 area in the
+ * piano sample set) sound noticeably quieter than their neighbours.
+ *
+ * Multiplicative on top of the master gain (2.5). Keys are instrument-
+ * scoped so different instruments can have different compensation.
+ * If a note isn't in the map, gain stays at 1.0 (no change).
+ *
+ * If you find another note that sounds off, add an entry here.
+ */
+const NOTE_GAIN: Partial<Record<InstrumentId, Record<string, number>>> = {
+  acoustic_grand_piano: {
+    Ab4: 1.4,   // min6 above C4 — noticeably quieter without boost
+    A4:  1.25,  // M6 above C4 — slightly quieter too
+    Bb4: 1.2,
+    B4:  1.15,
+  },
+};
+
+function playBuf(audioBuf: AudioBuffer, instId: InstrumentId, note: string): void {
   const a = ensureCtx();
   if (a.state === 'suspended') a.resume().catch(() => {});
   const src = a.createBufferSource();
   src.buffer = audioBuf;
   const g = a.createGain();
-  g.gain.value = 2.5;
+  const noteBoost = NOTE_GAIN[instId]?.[note] ?? 1;
+  g.gain.value = 2.5 * noteBoost;
   src.connect(g).connect(a.destination);
   src.start(0);
 }
@@ -126,12 +147,39 @@ function playBuf(audioBuf: AudioBuffer): void {
 export function pn(instId: InstrumentId, note: string, dl = 0): void {
   decodeNote(instId, note).then((buf) => {
     if (!buf) return;
-    if (dl > 0) setTimeout(() => playBuf(buf), dl * 1000);
-    else playBuf(buf);
+    if (dl > 0) setTimeout(() => playBuf(buf, instId, note), dl * 1000);
+    else playBuf(buf, instId, note);
   });
 }
 
 /** Play a MIDI number on the given instrument with optional delay. */
 export function pm(instId: InstrumentId, midi: number, dl = 0): void {
   pn(instId, m2n(midi), dl);
+}
+
+/**
+ * Play a phrase as semitone offsets from a root MIDI value, at a given tempo.
+ * Used by song references in the FeedbackSheet to play the actual hook
+ * from the song, transposed to whatever key the question was in.
+ * Notes are kept within the soundfont range A3–G5 (MIDI 57–79) by
+ * shifting whole octaves down (or up) on a per-note basis.
+ *
+ * @param instId    The instrument to play on
+ * @param rootMidi  The MIDI value of the phrase's root (0 in the offsets)
+ * @param offsets   Semitone offsets from root, one per note in the phrase
+ * @param bpm       Tempo for the phrase (default 110). Each note is 1 beat.
+ */
+export function playPhrase(
+  instId: InstrumentId,
+  rootMidi: number,
+  offsets: number[],
+  bpm = 110,
+): void {
+  const beat = 60 / bpm;
+  offsets.forEach((off, i) => {
+    let n = rootMidi + off;
+    while (n > 79) n -= 12;
+    while (n < 57) n += 12;
+    pm(instId, n, i * beat);
+  });
 }

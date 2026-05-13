@@ -38,9 +38,10 @@ export const distanceExercise: Exercise<DistancePayload> = {
   levels: DIST_LEVELS,
   usesDirection: false,
 
-  generate({ levelIndex, recentPicks }) {
+  generate({ levelIndex, recentPicks, distanceDirection }) {
     const lv = DIST_LEVELS[levelIndex];
     const st = pickFrom(lv.iv as readonly number[], recentPicks as number[]);
+    const dir = distanceDirection ?? 'both';
 
     // Properly clamp so BOTH notes land within the soundfont range.
     // Ascending: noteA ∈ [SAMPLE_LO, SAMPLE_HI - st]
@@ -48,24 +49,30 @@ export const distanceExercise: Exercise<DistancePayload> = {
     const canAsc  = SAMPLE_HI - st >= SAMPLE_LO;
     const canDesc = SAMPLE_HI    >= SAMPLE_LO + st;
 
+    // Resolve the actual direction we'll use this round
+    let useAsc: boolean;
+    if (dir === 'asc') {
+      useAsc = canAsc;
+    } else if (dir === 'desc') {
+      useAsc = !canDesc;
+    } else {
+      // 'both' — pick randomly among available options
+      if (canAsc && canDesc) useAsc = Math.random() < 0.5;
+      else useAsc = canAsc;
+    }
+
     let noteA: number;
     let noteB: number;
 
-    if (canAsc && canDesc) {
-      // Both directions work — pick randomly
-      if (Math.random() < 0.5) {
-        noteA = randRange(SAMPLE_LO, SAMPLE_HI - st);
-        noteB = noteA + st;
-      } else {
-        noteA = randRange(SAMPLE_LO + st, SAMPLE_HI);
-        noteB = noteA - st;
-      }
-    } else if (canAsc) {
+    if (useAsc && canAsc) {
       noteA = randRange(SAMPLE_LO, SAMPLE_HI - st);
       noteB = noteA + st;
     } else if (canDesc) {
       noteA = randRange(SAMPLE_LO + st, SAMPLE_HI);
       noteB = noteA - st;
+    } else if (canAsc) {
+      noteA = randRange(SAMPLE_LO, SAMPLE_HI - st);
+      noteB = noteA + st;
     } else {
       // st exceeds soundfont range — play the widest available gap
       noteA = SAMPLE_LO;

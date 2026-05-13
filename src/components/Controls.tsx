@@ -93,6 +93,31 @@ export function LevelDirRow({
   );
 }
 
+// ─── Distance direction toggle ────────────────────────────────────────────
+export function DistanceDirectionToggle({
+  value,
+  onChange,
+}: {
+  value: 'asc' | 'desc' | 'both';
+  onChange: (v: 'asc' | 'desc' | 'both') => void;
+}) {
+  return (
+    <div className="ctrl-row">
+      <div className="pg">
+        {(['asc', 'desc', 'both'] as const).map((d) => (
+          <button
+            key={d}
+            className={`pill${value === d ? ' on' : ''}`}
+            onClick={() => onChange(d)}
+          >
+            {d === 'asc' ? '↑ Asc' : d === 'desc' ? '↓ Desc' : '↕ Both'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Key selector ─────────────────────────────────────────────────────────
 export function KeyRow({
   keyName,
@@ -127,6 +152,62 @@ export function CadenceToggle({
   return (
     <div className="trow">
       <span>I–IV–V cadence</span>
+      <span
+        role="switch"
+        aria-checked={on}
+        tabIndex={0}
+        className={`tog${on ? ' on' : ''}`}
+        onClick={() => onChange(!on)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') onChange(!on);
+        }}
+      />
+    </div>
+  );
+}
+
+// ─── Spread voicing toggle (chord exercise only) ──────────────────────────
+export function SpreadToggle({
+  on,
+  onChange,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="trow">
+      <span>
+        Spread voicing
+        <span className="trow-sub"> · chord tones across 1 octave</span>
+      </span>
+      <span
+        role="switch"
+        aria-checked={on}
+        tabIndex={0}
+        className={`tog${on ? ' on' : ''}`}
+        onClick={() => onChange(!on)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') onChange(!on);
+        }}
+      />
+    </div>
+  );
+}
+
+// ─── Arpeggio toggle (chord exercise only) ────────────────────────────────
+export function ArpeggioToggle({
+  on,
+  onChange,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="trow">
+      <span>
+        Arpeggiate first
+        <span className="trow-sub"> · {on ? 'note-by-note, then stacked' : 'stacked only'}</span>
+      </span>
       <span
         role="switch"
         aria-checked={on}

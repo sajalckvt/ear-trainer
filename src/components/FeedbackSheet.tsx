@@ -10,6 +10,8 @@ interface FeedbackSheetProps {
   /** Hint text when in close_miss phase */
   hint: string | null;
   instrument: InstrumentId;
+  /** Root MIDI of the current question — used to transpose song-ref phrases */
+  questionRoot: number;
   onNext: () => void;
   onDismiss: () => void;
 }
@@ -19,6 +21,7 @@ export function FeedbackSheet({
   correctInfo,
   hint,
   instrument,
+  questionRoot,
   onNext,
   onDismiss,
 }: FeedbackSheetProps) {
@@ -69,13 +72,39 @@ export function FeedbackSheet({
               {correctInfo.label}
             </div>
 
-            {correctInfo.reference && (
+            {/* New schema: playable song references */}
+            {correctInfo.songRefs && correctInfo.songRefs.length > 0 && (
+              <div className="fs-songs">
+                {correctInfo.songRefs.map((s, i) => (
+                  <div key={i} className="fs-song">
+                    {s.play ? (
+                      <button
+                        className="fs-song-play"
+                        onClick={() => s.play!(instrument, questionRoot)}
+                        aria-label={`Play hook from ${s.title}`}
+                      >
+                        ▶
+                      </button>
+                    ) : (
+                      <span className="fs-song-play disabled" aria-hidden="true">🎵</span>
+                    )}
+                    <div className="fs-song-text">
+                      <div className="fs-song-title">{s.title}</div>
+                      {s.hint && <div className="fs-song-hint">{s.hint}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Legacy schema fallback — older exercises haven't migrated yet */}
+            {!correctInfo.songRefs && correctInfo.reference && (
               <div className="fs-ref">
                 <span className="fs-ref-icon">🎵</span>
                 <span>{correctInfo.reference}</span>
               </div>
             )}
-            {correctInfo.altReference && (
+            {!correctInfo.songRefs && correctInfo.altReference && (
               <div className="fs-ref alt">
                 <span className="fs-ref-icon">🎵</span>
                 <span>{correctInfo.altReference}</span>

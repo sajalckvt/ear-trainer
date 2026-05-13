@@ -16,11 +16,30 @@ export interface AnswerOption {
   hint?: string;
 }
 
+/**
+ * A song reference shown in the feedback sheet. Each ref has a title
+ * (and optional one-liner hint), and an optional playable hook so the
+ * user can tap to hear the actual melodic phrase from that song.
+ * The phrase is played on the user's currently selected instrument,
+ * transposed so the song's tonic equals the question's root.
+ */
+export interface SongRefPlayable {
+  title: string;
+  hint?: string;
+  /** If defined, FeedbackSheet shows a ▶ button that calls this with the
+   *  user's current instrument and the question's root MIDI value. */
+  play?: (instId: InstrumentId, rootMidi: number) => void;
+}
+
 export interface FeedbackInfo {
   label: string;
   color: string;
+  /** Deprecated — use songRefs. Kept for backwards-compat with exercises
+   *  that haven't migrated yet (interval, distance, melody). */
   reference?: string;
   altReference?: string;
+  /** New: playable song references. Preferred over reference/altReference. */
+  songRefs?: SongRefPlayable[];
   demoPlay?: (instId: InstrumentId) => void;
 }
 
@@ -37,9 +56,20 @@ export interface Exercise<TPayload = unknown> {
     keyOffset: number;
     direction: 'asc' | 'desc';
     recentPicks: Array<string | number>;
+    /** If true, exercises that support it should voice chords across
+     *  multiple octaves rather than in close root position. Optional —
+     *  exercises that don't support it can ignore it. */
+    spread?: boolean;
+    /** Distance exercise direction — separate from `direction` because
+     *  Distance also supports 'both' (the original random behaviour). */
+    distanceDirection?: 'asc' | 'desc' | 'both';
   }): Question & { payload: TPayload; pickId: string | number };
 
-  play(q: Question & { payload: TPayload }, instId: InstrumentId): void;
+  play(
+    q: Question & { payload: TPayload },
+    instId: InstrumentId,
+    opts?: { arpeggio?: boolean },
+  ): void;
 
   /** Static answer set for the level (used by most exercises). */
   answers(levelIndex: number): AnswerOption[];

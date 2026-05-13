@@ -21,6 +21,9 @@ export default function App() {
   const [direction, setDirection] = useState<'asc' | 'desc'>('asc');
   const [keyName, setKeyName] = useState<string>('C');
   const [cadenceEnabled, setCadenceEnabled] = useState<boolean>(false);
+  const [spread, setSpread] = useState<boolean>(false);
+  const [arpeggio, setArpeggio] = useState<boolean>(true);
+  const [distanceDirection, setDistanceDirection] = useState<'asc' | 'desc' | 'both'>('both');
   const [instrument, setInstrument] = useState<InstrumentId>('acoustic_grand_piano');
 
   const activeExercise = useMemo(
@@ -29,7 +32,7 @@ export default function App() {
   );
 
   const { session, nextQuestion, replay, answer, resetScore, resetQuestion } = useQuizState({
-    exercise: activeExercise, levelIndex, keyName, direction, cadenceEnabled, instrument,
+    exercise: activeExercise, levelIndex, keyName, direction, distanceDirection, cadenceEnabled, spread, arpeggio, instrument,
   });
 
   const { formatted: timerLabel, reset: resetTimer } = useTrainingTimer();
@@ -49,7 +52,7 @@ export default function App() {
     <div className="app">
       <div className="hdr">
         <h1>♪ Ear Trainer</h1>
-        <div className="sub">Intervals · Distance · Triads · Melodies</div>
+        <div className="sub">Intervals · Distance · Chords · Melodies</div>
       </div>
 
       <NavTabs screen={screen} onChange={setScreen} />
@@ -67,6 +70,12 @@ export default function App() {
         onKeyChange={setKeyName}
         cadenceEnabled={cadenceEnabled}
         onCadenceChange={setCadenceEnabled}
+        spread={spread}
+        onSpreadChange={setSpread}
+        arpeggio={arpeggio}
+        onArpeggioChange={setArpeggio}
+        distanceDirection={distanceDirection}
+        onDistanceDirectionChange={setDistanceDirection}
         instrument={instrument}
         onInstrumentChange={setInstrument}
         question={session.question}
