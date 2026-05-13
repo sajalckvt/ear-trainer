@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { m2d } from '../audio/theory';
 import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
-import type { InstrumentId } from '../audio/engine';
+import { pm, type InstrumentId } from '../audio/engine';
 import {
   PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, DistanceDirectionToggle, InstrumentPicker,
 } from '../components/Controls';
@@ -20,6 +20,8 @@ import {
   playProgressionChord,
   type ProgressionPayload,
 } from '../exercises/progression';
+import { MODE_MAP } from '../data/modes';
+import { PROGRESSION_CHORD_MAP } from '../data/progressions';
 
 interface TrainPageProps {
   visible: boolean;
@@ -149,6 +151,19 @@ export function TrainPage(props: TrainPageProps) {
     playProgressionChord(question as { payload: ProgressionPayload }, idx, instrument);
   };
 
+  // Play a chord by its Roman-numeral id — used during entry so the user
+  // hears the chord they just picked. Voices the chord in the question's key.
+  const handlePlayChord = (chordId: string) => {
+    if (!question) return;
+    const ch = PROGRESSION_CHORD_MAP[chordId];
+    if (!ch) return;
+    const keyRoot = (question.payload as ProgressionPayload).keyRoot;
+    let rm = keyRoot + ch.rootOffset;
+    while (rm + Math.max(...ch.iv) > 79) rm -= 12;
+    while (rm < 57) rm += 12;
+    ch.iv.forEach((iv: number) => pm(instrument, rm + iv, 0));
+  };
+
   // Reset sheet dismissed state when a new question starts
   const handleNext = () => {
     setSheetDismissed(false);
@@ -203,6 +218,21 @@ export function TrainPage(props: TrainPageProps) {
       }
       // Key tonic always shown so the user keeps the key in view
       highlights[payload.keyRoot] = highlights[payload.keyRoot] ?? '#6366f1';
+    } else if (activeExercise.id === 'modeHarmony') {
+      // ── Modal Harmony: hide notes pre-answer, show tonic + diagnostic after
+      highlights[question.root] = '#6366f1';
+      if (quizPhase === 'answered') {
+        const modePayload = question.payload as { modeId: string; keyRoot: number };
+        const mode = MODE_MAP[modePayload.modeId];
+        if (mode) {
+          // Tonic chord notes in accent
+          const tonicRoot = modePayload.keyRoot + mode.tonic.rootOffset;
+          mode.tonic.iv.forEach((iv) => { highlights[tonicRoot + iv] = mode.co; });
+          // Diagnostic chord notes in a lighter colour
+          const diagRoot = modePayload.keyRoot + mode.diagnostic.rootOffset;
+          mode.diagnostic.iv.forEach((iv) => { highlights[diagRoot + iv] = '#a78bfa'; });
+        }
+      }
     } else {
       // ── Standard exercises: original behaviour
       highlights[question.root] = '#6366f1';
@@ -228,6 +258,16 @@ export function TrainPage(props: TrainPageProps) {
       pianoLabelColor = '#a78bfa';
     } else {
       pianoLabel = question.displayLabel ?? `Key: ${m2d(payload.keyRoot)}`;
+    }
+  } else if (activeExercise.id === 'modeHarmony' && question) {
+    if (quizPhase === 'answered') {
+      const modePayload = question.payload as { modeId: string };
+      const mode = MODE_MAP[modePayload.modeId];
+      pianoLabel = mode ? `${mode.tonic.rn} → ${mode.diagnostic.rn} · ${mode.n}` : '';
+      pianoLabelColor = mode?.co ?? '#6366f1';
+    } else {
+      pianoLabel = 'Listen for the diagnostic chord pair';
+      pianoLabelColor = '#6366f1';
     }
   } else if (question && quizPhase === 'answered') {
     pianoLabel = question.notes.map(m2d).join(' ');
@@ -304,6 +344,7 @@ export function TrainPage(props: TrainPageProps) {
               activeChordIdx={progChordIdx}
               onSubmit={onGuess}
               onReviewSlot={handleSlotReview}
+              onPlayChord={handlePlayChord}
             />
           ) : (
             <AnswerGrid

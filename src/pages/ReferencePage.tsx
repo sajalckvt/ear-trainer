@@ -235,6 +235,9 @@ function ModesSection({ instrument }: { instrument: InstrumentId }) {
               </button>
             </div>
 
+            {/* Diatonic chords built from this mode's scale */}
+            <DiatonicChordsForMode scale={mode.scale} keyRoot={keyRoot} instrument={instrument} />
+
             {/* Song refs */}
             {mode.songs.length > 0 && (
               <div style={{ fontSize: 11, color: '#666', lineHeight: 1.6 }}>
@@ -253,6 +256,82 @@ function ModesSection({ instrument }: { instrument: InstrumentId }) {
   );
 }
 
+
+/**
+ * Build the 7 diatonic triads from a mode's scale intervals.
+ * For each scale degree, stack two thirds (every other scale note)
+ * and classify the resulting triad as maj/min/dim/aug.
+ */
+function DiatonicChordsForMode({
+  scale,
+  keyRoot,
+  instrument,
+}: { scale: number[]; keyRoot: number; instrument: InstrumentId }) {
+  const romanNums = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii'];
+
+  const chords = scale.map((rootIv, idx) => {
+    // Stack thirds: root, 3rd (2 scale steps up), 5th (4 scale steps up)
+    const thirdIdx = (idx + 2) % 7;
+    const fifthIdx = (idx + 4) % 7;
+    let thirdIv = scale[thirdIdx] - rootIv;
+    let fifthIv = scale[fifthIdx] - rootIv;
+    if (thirdIv < 0) thirdIv += 12;
+    if (fifthIv < 0) fifthIv += 12;
+
+    // Classify
+    let quality: string;
+    let qualityShort: string;
+    let co: string;
+    if (thirdIv === 4 && fifthIv === 7) { quality = 'Major'; qualityShort = 'Maj'; co = '#22c55e'; }
+    else if (thirdIv === 3 && fifthIv === 7) { quality = 'Minor'; qualityShort = 'min'; co = '#3b82f6'; }
+    else if (thirdIv === 3 && fifthIv === 6) { quality = 'Dim'; qualityShort = '°'; co = '#ef4444'; }
+    else if (thirdIv === 4 && fifthIv === 8) { quality = 'Aug'; qualityShort = '+'; co = '#f97316'; }
+    else { quality = `(${thirdIv},${fifthIv})`; qualityShort = '?'; co = '#888'; }
+
+    // Roman numeral formatting: uppercase for major/aug, lowercase for minor/dim
+    const isUpper = quality === 'Major' || quality === 'Aug';
+    const rn = isUpper
+      ? romanNums[idx].toUpperCase() + (quality === 'Aug' ? '+' : '')
+      : romanNums[idx] + (quality === 'Dim' ? '°' : '');
+
+    return { rootIv, thirdIv, fifthIv, quality, qualityShort, co, rn, degreeIdx: idx };
+  });
+
+  const playChord = (rootIv: number, thirdIv: number, fifthIv: number) => {
+    const notes = [0, thirdIv, fifthIv].map((iv) => {
+      let n = keyRoot + rootIv + iv;
+      while (n > 79) n -= 12;
+      while (n < 57) n += 12;
+      return n;
+    });
+    notes.forEach((n) => pm(instrument, n, 0));
+  };
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 10, color: '#666', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
+        Diatonic triads
+      </div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {chords.map((ch) => (
+          <button
+            key={ch.degreeIdx}
+            onClick={() => playChord(ch.rootIv, ch.thirdIv, ch.fifthIv)}
+            style={{
+              flex: '1 1 0', minWidth: 40, padding: '5px 2px',
+              background: '#111125', border: `1.5px solid ${ch.co}33`,
+              borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+              textAlign: 'center', transition: 'all .12s',
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: ch.co }}>{ch.rn}</div>
+            <div style={{ fontSize: 9, color: '#666' }}>{ch.quality}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function IntervalReferenceSheet({ instrument }: { instrument: InstrumentId }) {
   const sections = [
