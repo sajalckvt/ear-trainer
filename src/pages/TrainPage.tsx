@@ -176,28 +176,33 @@ export function TrainPage(props: TrainPageProps) {
   // Piano/fretboard highlights
   const highlights: Record<number, string> = {};
   if (question) {
-    if (activeExercise.id === 'progression' && progChordIdx !== null) {
-      // ── Progression mode: highlight just the current chord brightly, the
-      // previous chord dimly (a fading trail).
+    if (activeExercise.id === 'progression') {
+      // ── Progression mode ─────────────────────────────────────────────
+      // Before the user answers, we deliberately HIDE the chord notes —
+      // otherwise they could just read the chord off the piano keys/labels
+      // and there's nothing to identify. We only show the key tonic so the
+      // user keeps the key in view. The active slot in the slot bar still
+      // pulses to indicate which chord is currently playing.
+      //
+      // After answer (quizPhase === 'answered'), the full chord notes are
+      // revealed and the step-through review is enabled.
       const payload = question.payload as ProgressionPayload;
-      const dim = '#3a3a5e';   // ghost colour for the previous chord
-      const live = '#a78bfa';  // bright for the current chord
-      if (progChordIdx > 0) {
-        const prev = progressionChordNotes(
-          question as { payload: ProgressionPayload }, progChordIdx - 1,
+      if (quizPhase === 'answered' && progChordIdx !== null) {
+        const dim = '#3a3a5e';
+        const live = '#a78bfa';
+        if (progChordIdx > 0) {
+          const prev = progressionChordNotes(
+            question as { payload: ProgressionPayload }, progChordIdx - 1,
+          );
+          prev.forEach((n) => { highlights[n] = dim; });
+        }
+        const curr = progressionChordNotes(
+          question as { payload: ProgressionPayload }, progChordIdx,
         );
-        prev.forEach((n) => { highlights[n] = dim; });
+        curr.forEach((n) => { highlights[n] = live; });
       }
-      const curr = progressionChordNotes(
-        question as { payload: ProgressionPayload }, progChordIdx,
-      );
-      curr.forEach((n) => { highlights[n] = live; });
-      // Always anchor the key tonic in indigo so the user keeps the key in view
+      // Key tonic always shown so the user keeps the key in view
       highlights[payload.keyRoot] = highlights[payload.keyRoot] ?? '#6366f1';
-    } else if (activeExercise.id === 'progression') {
-      // Progression mode but no chord-idx set yet — just the key tonic
-      const payload = question.payload as ProgressionPayload;
-      highlights[payload.keyRoot] = '#6366f1';
     } else {
       // ── Standard exercises: original behaviour
       highlights[question.root] = '#6366f1';
@@ -210,12 +215,20 @@ export function TrainPage(props: TrainPageProps) {
 
   let pianoLabel = '';
   let pianoLabelColor = '#6366f1';
-  if (activeExercise.id === 'progression' && question && progChordIdx !== null) {
-    // Show the chord-id label of the chord currently being shown
+  if (activeExercise.id === 'progression' && question) {
     const payload = question.payload as ProgressionPayload;
-    const chId = payload.chordIds[progChordIdx];
-    pianoLabel = `Chord ${progChordIdx + 1} of ${payload.chordIds.length}` + (quizPhase === 'answered' ? ` · ${chId}` : '');
-    pianoLabelColor = '#a78bfa';
+    if (quizPhase === 'answered' && progChordIdx !== null) {
+      // Post-answer: show the chord identity in the label
+      const chId = payload.chordIds[progChordIdx];
+      pianoLabel = `Chord ${progChordIdx + 1} of ${payload.chordIds.length} · ${chId}`;
+      pianoLabelColor = '#a78bfa';
+    } else if (progChordIdx !== null) {
+      // During playback (pre-answer): hint at progress without revealing the chord
+      pianoLabel = `Chord ${progChordIdx + 1} of ${payload.chordIds.length}`;
+      pianoLabelColor = '#a78bfa';
+    } else {
+      pianoLabel = question.displayLabel ?? `Key: ${m2d(payload.keyRoot)}`;
+    }
   } else if (question && quizPhase === 'answered') {
     pianoLabel = question.notes.map(m2d).join(' ');
     pianoLabelColor = feedbackInfo?.color ?? '#6366f1';
