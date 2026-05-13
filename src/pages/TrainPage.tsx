@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { m2d } from '../audio/theory';
 import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
@@ -14,6 +14,12 @@ import { Piano } from '../components/Piano';
 import { Fretboard } from '../components/Fretboard';
 import { FeedbackSheet } from '../components/FeedbackSheet';
 import { MelodyBoard } from '../components/MelodyBoard';
+import {
+  CHORD_STEP,
+  progressionChordNotes,
+  playProgressionChord,
+  type ProgressionPayload,
+} from '../exercises/progression';
 
 interface TrainPageProps {
   visible: boolean;
@@ -70,6 +76,79 @@ export function TrainPage(props: TrainPageProps) {
 
   const [sheetDismissed, setSheetDismissed] = useState(false);
 
+  // ─── Progression playback animation ───────────────────────────────────────
+  // For the progression exercise, we step a `progChordIdx` index forward in
+  // sync with audio playback so piano/fretboard/slots all highlight only the
+  // chord that's currently sounding (with a dim "trail" on the previous one).
+  //
+  // After answer, the user can click any slot to set this index manually and
+  // re-hear just that chord — the step-through review.
+  const [progChordIdx, setProgChordIdx] = useState<number | null>(null);
+  const progTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearProgTimers = () => {
+    progTimersRef.current.forEach(clearTimeout);
+    progTimersRef.current = [];
+  };
+
+  /** Schedule the chord-index animation. cadenceDelay matches the audio delay
+   *  introduced by playCadence (1800ms when enabled, 0 otherwise). */
+  const startProgressionAnimation = (chordCount: number, cadenceDelay: number) => {
+    clearProgTimers();
+    setProgChordIdx(null);  // clear immediately
+    for (let i = 0; i < chordCount; i++) {
+      const t = setTimeout(
+        () => setProgChordIdx(i),
+        cadenceDelay + i * CHORD_STEP * 1000,
+      );
+      progTimersRef.current.push(t);
+    }
+  };
+
+  // Cancel any in-flight animation when the question changes or unmounts
+  useEffect(() => () => clearProgTimers(), []);
+  useEffect(() => {
+    // When the question id changes (new question), reset and stop any leftover timers
+    clearProgTimers();
+    setProgChordIdx(null);
+  }, [question?.pickId]);
+
+  // The animation for the first play of a new question is started by the
+  // useEffect below (deps on question.pickId). handleReplay needs its own
+  // call since replays don't generate a new question.
+  const handleReplay = () => {
+    onReplay();
+    if (activeExercise.id === 'progression' && question) {
+      const chordCount = (question.payload as ProgressionPayload).chordIds.length;
+      const cadenceDelay = cadenceEnabled ? 1800 : 0;
+      startProgressionAnimation(chordCount, cadenceDelay);
+    }
+  };
+
+  // When a new progression question arrives, auto-start its animation.
+  // (For onStart the question is freshly generated inside the hook; we
+  // detect this via the question id changing while quizPhase === 'playing'.)
+  useEffect(() => {
+    if (activeExercise.id !== 'progression') return;
+    if (quizPhase !== 'playing' || !question) return;
+    const chordCount = (question.payload as ProgressionPayload).chordIds.length;
+    const cadenceDelay = cadenceEnabled ? 1800 : 0;
+    startProgressionAnimation(chordCount, cadenceDelay);
+    // The effect deliberately only depends on the question id + exercise id —
+    // we want it to fire once per new question, not on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question?.pickId, activeExercise.id]);
+
+  // Step-through (post-answer): clicking a slot replays that chord and
+  // sets the highlight index. Only valid once the answer is locked in.
+  const handleSlotReview = (idx: number) => {
+    if (!question) return;
+    if (quizPhase !== 'answered') return;
+    clearProgTimers();
+    setProgChordIdx(idx);
+    playProgressionChord(question as { payload: ProgressionPayload }, idx, instrument);
+  };
+
   // Reset sheet dismissed state when a new question starts
   const handleNext = () => {
     setSheetDismissed(false);
@@ -97,16 +176,47 @@ export function TrainPage(props: TrainPageProps) {
   // Piano/fretboard highlights
   const highlights: Record<number, string> = {};
   if (question) {
-    highlights[question.root] = '#6366f1';
-    if (quizPhase === 'answered' && feedbackInfo) {
-      const accent = feedbackInfo.color;
-      question.notes.forEach((n) => { if (n !== question.root) highlights[n] = accent; });
+    if (activeExercise.id === 'progression' && progChordIdx !== null) {
+      // ── Progression mode: highlight just the current chord brightly, the
+      // previous chord dimly (a fading trail).
+      const payload = question.payload as ProgressionPayload;
+      const dim = '#3a3a5e';   // ghost colour for the previous chord
+      const live = '#a78bfa';  // bright for the current chord
+      if (progChordIdx > 0) {
+        const prev = progressionChordNotes(
+          question as { payload: ProgressionPayload }, progChordIdx - 1,
+        );
+        prev.forEach((n) => { highlights[n] = dim; });
+      }
+      const curr = progressionChordNotes(
+        question as { payload: ProgressionPayload }, progChordIdx,
+      );
+      curr.forEach((n) => { highlights[n] = live; });
+      // Always anchor the key tonic in indigo so the user keeps the key in view
+      highlights[payload.keyRoot] = highlights[payload.keyRoot] ?? '#6366f1';
+    } else if (activeExercise.id === 'progression') {
+      // Progression mode but no chord-idx set yet — just the key tonic
+      const payload = question.payload as ProgressionPayload;
+      highlights[payload.keyRoot] = '#6366f1';
+    } else {
+      // ── Standard exercises: original behaviour
+      highlights[question.root] = '#6366f1';
+      if (quizPhase === 'answered' && feedbackInfo) {
+        const accent = feedbackInfo.color;
+        question.notes.forEach((n) => { if (n !== question.root) highlights[n] = accent; });
+      }
     }
   }
 
   let pianoLabel = '';
   let pianoLabelColor = '#6366f1';
-  if (question && quizPhase === 'answered') {
+  if (activeExercise.id === 'progression' && question && progChordIdx !== null) {
+    // Show the chord-id label of the chord currently being shown
+    const payload = question.payload as ProgressionPayload;
+    const chId = payload.chordIds[progChordIdx];
+    pianoLabel = `Chord ${progChordIdx + 1} of ${payload.chordIds.length}` + (quizPhase === 'answered' ? ` · ${chId}` : '');
+    pianoLabelColor = '#a78bfa';
+  } else if (question && quizPhase === 'answered') {
     pianoLabel = question.notes.map(m2d).join(' ');
     pianoLabelColor = feedbackInfo?.color ?? '#6366f1';
   } else if (question) {
@@ -167,7 +277,7 @@ export function TrainPage(props: TrainPageProps) {
             correctLabel={quizPhase === 'answered' ? correctLabel : null}
             feedbackInfo={quizPhase === 'answered' ? feedbackInfo : null}
             onStart={onStart}
-            onReplay={onReplay}
+            onReplay={handleReplay}
             onNext={handleNext}
           />
 
@@ -178,7 +288,9 @@ export function TrainPage(props: TrainPageProps) {
               guessedString={feedback?.guess !== undefined ? String(feedback.guess) : null}
               correctString={quizPhase === 'answered' && correctId !== null ? String(correctId) : null}
               locked={quizPhase === 'answered'}
+              activeChordIdx={progChordIdx}
               onSubmit={onGuess}
+              onReviewSlot={handleSlotReview}
             />
           ) : (
             <AnswerGrid

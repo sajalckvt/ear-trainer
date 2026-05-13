@@ -23,12 +23,19 @@ import { SAMPLE_LO, SAMPLE_HI } from '../data/constants';
 import { pm, type InstrumentId } from '../audio/engine';
 import type { Exercise, AnswerOption } from './types';
 
-interface ProgressionPayload {
+export interface ProgressionPayload {
   /** Ordered list of chord ids that make up the progression. */
   chordIds: string[];
   /** MIDI value of the key's tonic (root of I). */
   keyRoot: number;
 }
+
+// ─── Playback timing ────────────────────────────────────────────────────────
+// Exported so the UI can sync animations to the audio.
+export const CHORD_DUR = 1.2;   // seconds the chord rings
+export const CHORD_GAP = 0.15;  // pause before the next chord
+/** Total time between successive chord starts. */
+export const CHORD_STEP = CHORD_DUR + CHORD_GAP;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -77,6 +84,34 @@ function voiceChord(chordRoot: number, intervals: number[]): number[] {
   return intervals.map((i) => rm + i);
 }
 
+/**
+ * MIDI notes for a specific chord slot in a progression question.
+ * Used to drive the piano/fretboard highlights as the progression plays.
+ */
+export function progressionChordNotes(
+  q: { payload: ProgressionPayload },
+  idx: number,
+): number[] {
+  const { chordIds, keyRoot } = q.payload;
+  const chId = chordIds[idx];
+  if (!chId) return [];
+  const ch = PROGRESSION_CHORD_MAP[chId];
+  return voiceChord(keyRoot + ch.rootOffset, ch.iv);
+}
+
+/**
+ * Play just one chord from the progression — used for the post-answer
+ * step-through where the user taps slots to re-hear individual chords.
+ */
+export function playProgressionChord(
+  q: { payload: ProgressionPayload },
+  idx: number,
+  instId: InstrumentId,
+): void {
+  const notes = progressionChordNotes(q, idx);
+  notes.forEach((n) => pm(instId, n, 0));
+}
+
 // ─── Exercise ────────────────────────────────────────────────────────────────
 
 export const progressionExercise: Exercise<ProgressionPayload> = {
@@ -115,13 +150,11 @@ export const progressionExercise: Exercise<ProgressionPayload> = {
 
   play(q, instId: InstrumentId) {
     const { chordIds, keyRoot } = q.payload;
-    const chordDur = 1.2;   // seconds per chord
-    const gap = 0.15;       // small gap between chords
 
     chordIds.forEach((chId, idx) => {
       const ch = PROGRESSION_CHORD_MAP[chId];
       const notes = voiceChord(keyRoot + ch.rootOffset, ch.iv);
-      const startAt = idx * (chordDur + gap);
+      const startAt = idx * CHORD_STEP;
       notes.forEach((n) => pm(instId, n, startAt));
     });
   },

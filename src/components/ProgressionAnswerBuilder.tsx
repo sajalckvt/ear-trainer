@@ -26,8 +26,13 @@ interface ProgressionAnswerBuilderProps {
   correctString: string | null;
   /** Disables interaction (after answer revealed). */
   locked: boolean;
+  /** Currently active chord index — set by playback animation pre-answer,
+   *  or by review clicks post-answer. Null when nothing is highlighted. */
+  activeChordIdx: number | null;
   /** Called when all slots are filled — value is the comma-joined sequence. */
   onSubmit: (joined: string) => void;
+  /** Called when the user taps a slot post-answer to review that chord. */
+  onReviewSlot?: (idx: number) => void;
 }
 
 export function ProgressionAnswerBuilder({
@@ -36,7 +41,9 @@ export function ProgressionAnswerBuilder({
   guessedString,
   correctString,
   locked,
+  activeChordIdx,
   onSubmit,
+  onReviewSlot,
 }: ProgressionAnswerBuilderProps) {
   // Local in-progress slot fill state. Reset whenever slotCount changes
   // (i.e. when a new question begins).
@@ -80,8 +87,12 @@ export function ProgressionAnswerBuilder({
   };
 
   const handleSlotTap = (idx: number) => {
-    if (locked) return;
-    // Move cursor to this slot so the next pick replaces it
+    if (locked) {
+      // Review mode: re-hear this chord
+      onReviewSlot?.(idx);
+      return;
+    }
+    // Entry mode: move cursor to this slot so the next pick replaces it
     setCursor(idx);
   };
 
@@ -98,6 +109,7 @@ export function ProgressionAnswerBuilder({
       <div className="prog-slots">
         {displaySlots.map((val, i) => {
           const isCursor = !locked && i === cursor;
+          const isPlaying = activeChordIdx === i;
           const userGuess = guessSlots?.[i] ?? null;
           const correctVal = correctSlots?.[i] ?? null;
           const isWrong = locked && userGuess !== null && correctVal !== null && userGuess !== correctVal;
@@ -108,6 +120,7 @@ export function ProgressionAnswerBuilder({
 
           let cls = 'prog-slot';
           if (isCursor) cls += ' active';
+          if (isPlaying) cls += ' playing';
           if (isRight) cls += ' co';
           if (isWrong) cls += ' wr';
 
@@ -116,8 +129,8 @@ export function ProgressionAnswerBuilder({
               key={i}
               className={cls}
               onClick={() => handleSlotTap(i)}
-              disabled={locked}
               style={chord ? { '--ac': chord.color } as React.CSSProperties : undefined}
+              title={locked ? 'Tap to re-hear this chord' : undefined}
             >
               <span className="prog-slot-idx">{i + 1}</span>
               <span className="prog-slot-val">{chord?.short ?? '—'}</span>
@@ -137,6 +150,12 @@ export function ProgressionAnswerBuilder({
           </button>
         )}
       </div>
+
+      {locked && (
+        <div className="prog-review-hint">
+          Tap any slot above to re-hear that chord on its own
+        </div>
+      )}
 
       {/* Chord answer grid — reused style, but our own click handler */}
       <div className="ag">

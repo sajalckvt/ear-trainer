@@ -156,8 +156,22 @@ body {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
   background: rgba(99, 102, 241, 0.08);
 }
+.prog-slot.playing {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.35), 0 0 16px rgba(167, 139, 250, 0.4);
+  background: rgba(167, 139, 250, 0.15);
+}
 .prog-slot.co { border-color: #22c55e; background: rgba(34, 197, 94, 0.12); }
 .prog-slot.wr { border-color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+.prog-slot.co.playing, .prog-slot.wr.playing {
+  /* When reviewing post-answer, layer the playing glow over correct/wrong tint */
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.45), 0 0 18px rgba(167, 139, 250, 0.5);
+}
+
+.prog-review-hint {
+  font-size: 11px; color: #666; text-align: center;
+  margin-top: -4px;
+}
 
 .prog-slot-idx {
   font-size: 9px; color: #555; text-transform: uppercase;
