@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NN, ND, IVS, CHORDS, INSTS } from '../data/constants';
 import { PROGRESSION_CHORDS } from '../data/progressions';
 import { pn, pm, type InstrumentId } from '../audio/engine';
@@ -10,14 +11,55 @@ interface ReferencePageProps {
   onInstrumentChange: (id: InstrumentId) => void;
 }
 
+type RefSection = 'notes' | 'intervals' | 'chords' | 'modes';
+
+const SECTIONS: ReadonlyArray<{ id: RefSection; label: string }> = [
+  { id: 'notes',     label: 'Notes' },
+  { id: 'intervals', label: 'Intervals' },
+  { id: 'chords',    label: 'Chords' },
+  { id: 'modes',     label: 'Modes' },
+];
+
 export function ReferencePage({ visible, instrument, onInstrumentChange }: ReferencePageProps) {
+  const [section, setSection] = useState<RefSection>('notes');
+
   return (
     <div className={`screen${visible ? ' vis' : ''}`}>
+      {/* Instrument picker — global, lives above the section nav so it
+          applies to every demo regardless of which section is active. */}
       <div className="bl" style={{ marginBottom: 10 }}>Instrument sampler</div>
       <InstrumentPicker instrument={instrument} onChange={onInstrumentChange} />
 
-      {/* Individual notes C4..C5 */}
-      <div style={{ margin: '10px 0' }}><span className="bl">Play notes</span></div>
+      {/* Section nav — same pill style as the level pills on the train page. */}
+      <div className="ctrl-row" style={{ marginTop: 14, marginBottom: 14 }}>
+        <div className="pg">
+          {SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              className={`pill${section === s.id ? ' on' : ''}`}
+              onClick={() => setSection(s.id)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {section === 'notes'     && <NotesSection     instrument={instrument} />}
+      {section === 'intervals' && <IntervalsSection instrument={instrument} />}
+      {section === 'chords'    && <ChordsSection    instrument={instrument} />}
+      {section === 'modes'     && <ModesSection     instrument={instrument} />}
+    </div>
+  );
+}
+
+// ─── Notes section ──────────────────────────────────────────────────────────
+// Single-note sampler plus the "intervals from C4" quick-play row. The
+// foundation tools — play one sound and hear what it is.
+function NotesSection({ instrument }: { instrument: InstrumentId }) {
+  return (
+    <>
+      <div style={{ margin: '4px 0 10px' }}><span className="bl">Play notes</span></div>
       <div className="snotes">
         {Array.from({ length: 13 }, (_, i) => {
           const nn = NN[i % 12];
@@ -35,8 +77,7 @@ export function ReferencePage({ visible, instrument, onInstrumentChange }: Refer
         })}
       </div>
 
-      {/* Intervals from C4 */}
-      <div style={{ margin: '10px 0' }}><span className="bl">Play intervals from C4</span></div>
+      <div style={{ margin: '14px 0 10px' }}><span className="bl">Play intervals from C4</span></div>
       <div className="ag" style={{ marginBottom: 20 }}>
         {IVS.slice(0, 13).map((iv) => (
           <button
@@ -53,18 +94,31 @@ export function ReferencePage({ visible, instrument, onInstrumentChange }: Refer
           </button>
         ))}
       </div>
+    </>
+  );
+}
 
-      {/* Interval reference sheet grouped by category */}
+// ─── Intervals section ──────────────────────────────────────────────────────
+// The full interval reference sheet grouped by category. Tapping a row
+// plays the interval from C4.
+function IntervalsSection({ instrument }: { instrument: InstrumentId }) {
+  return (
+    <>
       <div className="bl" style={{ marginBottom: 10 }}>Interval reference</div>
       <IntervalReferenceSheet instrument={instrument} />
+    </>
+  );
+}
 
-      {/* Chord reference */}
-      <div style={{ marginTop: 16 }}>
-        <div className="bl" style={{ marginBottom: 10 }}>Chord / Triad reference</div>
-      </div>
+// ─── Chords section ─────────────────────────────────────────────────────────
+// Everything chord-related: triads/7ths/etc reference, chord-function
+// explainer, diatonic Roman-numeral list, and the I-IV-V cadence voicings.
+function ChordsSection({ instrument }: { instrument: InstrumentId }) {
+  return (
+    <>
+      <div className="bl" style={{ marginBottom: 10 }}>Chord / Triad reference</div>
       <ChordReferenceSheet instrument={instrument} />
 
-      {/* Chord function in a key */}
       <div style={{ marginTop: 16 }}>
         <div className="bl" style={{ marginBottom: 10 }}>Chord function · how chords behave in a key</div>
         <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
@@ -73,7 +127,6 @@ export function ReferencePage({ visible, instrument, onInstrumentChange }: Refer
         <ChordFunctionSheet instrument={instrument} />
       </div>
 
-      {/* Diatonic chord reference */}
       <div style={{ marginTop: 16 }}>
         <div className="bl" style={{ marginBottom: 10 }}>Diatonic chord reference · Roman numerals in C major</div>
         <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
@@ -82,7 +135,6 @@ export function ReferencePage({ visible, instrument, onInstrumentChange }: Refer
         <DiatonicChordSheet instrument={instrument} />
       </div>
 
-      {/* Cadence voicings */}
       <div style={{ marginTop: 16 }}>
         <div className="bl" style={{ marginBottom: 10 }}>Cadence voicings</div>
         <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
@@ -90,9 +142,27 @@ export function ReferencePage({ visible, instrument, onInstrumentChange }: Refer
         </div>
         <CadenceVoicings instrument={instrument} />
       </div>
+    </>
+  );
+}
+
+// ─── Modes section ──────────────────────────────────────────────────────────
+// Placeholder. Content lands when the Modes exercise + reference data ship.
+function ModesSection({ instrument: _instrument }: { instrument: InstrumentId }) {
+  return (
+    <div style={{
+      padding: '32px 16px', textAlign: 'center',
+      color: '#666', fontSize: 13, lineHeight: 1.6,
+    }}>
+      <div style={{ fontSize: 24, marginBottom: 8 }}>🎼</div>
+      <div style={{ color: '#aaa', fontWeight: 600, marginBottom: 4 }}>Modes — coming soon</div>
+      <div>
+        Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian — each with its signature flavour, diagnostic chord pair, and song mnemonics. Stay tuned.
+      </div>
     </div>
   );
 }
+
 
 function IntervalReferenceSheet({ instrument }: { instrument: InstrumentId }) {
   const sections = [
