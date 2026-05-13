@@ -329,33 +329,49 @@ export function buildDiatonicTriads(scale: number[]): DiatonicTriad[] {
 }
 
 /**
- * Generate a 4-chord modal progression that always includes the tonic (degree 0)
- * at position 1 and the diagnostic chord somewhere in the middle.
- * Fills the remaining slots with other diatonic triads (no immediate repeats).
+ * Generate a modal progression of `count` chords that always includes the
+ * tonic at position 1 and the diagnostic chord somewhere in the sequence.
+ * Fills remaining slots with other diatonic triads (no immediate repeats).
+ *
+ * count=2: just the diagnostic pair (tonic → diagnostic)
+ * count=3: tonic → random → diagnostic
+ * count=4: tonic → random → diagnostic → random/tonic
  */
-export function generateModalProgression(mode: ModeDefinition): DiatonicTriad[] {
+export function generateModalProgression(mode: ModeDefinition, count = 2): DiatonicTriad[] {
   const triads = buildDiatonicTriads(mode.scale);
   const tonic = triads[0];
-
-  // Find the diagnostic chord in the diatonic set (closest match by rootOffset)
   const diagTriad = triads.find((t) => t.rootOffset === mode.diagnostic.rootOffset) ?? triads[1];
+
+  if (count <= 2) {
+    return [tonic, diagTriad];
+  }
 
   // Pool of other triads (not tonic, not diagnostic)
   const others = triads.filter((t) => t !== tonic && t !== diagTriad);
-
-  // Shuffle others
   for (let i = others.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [others[i], others[j]] = [others[j], others[i]];
   }
 
-  // Build: tonic, [random], diagnostic, [random or tonic]
-  const prog: DiatonicTriad[] = [
-    tonic,
-    others[0] ?? tonic,
-    diagTriad,
-    Math.random() < 0.5 ? tonic : (others[1] ?? tonic),
-  ];
+  const prog: DiatonicTriad[] = [tonic];
+
+  // Fill middle slots with randoms, inserting diagnostic at a random middle position
+  const diagPos = 1 + Math.floor(Math.random() * (count - 2)); // between 1 and count-2
+  let otherIdx = 0;
+  for (let i = 1; i < count; i++) {
+    if (i === diagPos) {
+      prog.push(diagTriad);
+    } else {
+      // Pick from others, avoiding immediate repeat
+      let pick = others[otherIdx % others.length];
+      if (prog.length > 0 && pick === prog[prog.length - 1]) {
+        otherIdx++;
+        pick = others[otherIdx % others.length];
+      }
+      prog.push(pick);
+      otherIdx++;
+    }
+  }
 
   return prog;
 }

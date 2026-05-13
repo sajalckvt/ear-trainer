@@ -118,6 +118,32 @@ export function DistanceDirectionToggle({
   );
 }
 
+// ─── Mode chord count toggle ─────────────────────────────────────────────
+export function ModeChordCountToggle({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="trow">
+      <span>Chords per question</span>
+      <div className="pg">
+        {[2, 3, 4].map((n) => (
+          <button
+            key={n}
+            className={`pill${value === n ? ' on' : ''}`}
+            onClick={() => onChange(n)}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Key selector ─────────────────────────────────────────────────────────
 export function KeyRow({
   keyName,

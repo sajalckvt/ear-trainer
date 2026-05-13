@@ -61,18 +61,19 @@ export const modeHarmonyExercise: Exercise<ModePayload> = {
   levels: MODE_LEVELS,
   usesDirection: false,
 
-  generate({ levelIndex, keyOffset, recentPicks }) {
+  generate({ levelIndex, keyOffset, recentPicks, modeChordCount }) {
     const lv = MODE_LEVELS[levelIndex];
     const modeId = pick(lv.modes, recentPicks as string[]);
     const mode = MODE_MAP[modeId];
+    const chordCount = modeChordCount ?? 2;
 
     let keyRoot = 60 + keyOffset;
     // Clamp — the widest chord could be degree 6 (rootOffset ~11) + P5 (7) = 18 above key root
     while (keyRoot + 18 > SAMPLE_HI) keyRoot -= 12;
     while (keyRoot < SAMPLE_LO) keyRoot += 12;
 
-    // Generate a 4-chord progression using the mode's diatonic triads
-    const progression = generateModalProgression(mode);
+    // Generate a progression using the mode's diatonic triads
+    const progression = generateModalProgression(mode, chordCount);
 
     // Collect all notes for piano highlight after answer
     const allNotes: number[] = [];
@@ -85,7 +86,7 @@ export const modeHarmonyExercise: Exercise<ModePayload> = {
       notes: allNotes,
       payload: { modeId, keyRoot, progression },
       pickId: modeId,
-      displayLabel: '4-chord modal progression',
+      displayLabel: `${chordCount}-chord modal progression`,
     };
   },
 
