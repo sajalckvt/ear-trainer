@@ -9,6 +9,7 @@ import {
 import { ScoreBar } from '../components/ScoreBar';
 import { PlayArea } from '../components/PlayArea';
 import { AnswerGrid } from '../components/AnswerGrid';
+import { ProgressionAnswerBuilder } from '../components/ProgressionAnswerBuilder';
 import { Piano } from '../components/Piano';
 import { Fretboard } from '../components/Fretboard';
 import { FeedbackSheet } from '../components/FeedbackSheet';
@@ -164,13 +165,24 @@ export function TrainPage(props: TrainPageProps) {
             onNext={handleNext}
           />
 
-          <AnswerGrid
-            answers={answers}
-            correctId={quizPhase === 'answered' ? correctId : null}
-            guessedId={feedback?.guess ?? null}
-            locked={quizPhase === 'answered'}
-            onGuess={onGuess}
-          />
+          {activeExercise.id === 'progression' && question ? (
+            <ProgressionAnswerBuilder
+              answers={answers}
+              slotCount={(question.payload as { chordIds: string[] }).chordIds.length}
+              guessedString={feedback?.guess !== undefined ? String(feedback.guess) : null}
+              correctString={quizPhase === 'answered' && correctId !== null ? String(correctId) : null}
+              locked={quizPhase === 'answered'}
+              onSubmit={onGuess}
+            />
+          ) : (
+            <AnswerGrid
+              answers={answers}
+              correctId={quizPhase === 'answered' ? correctId : null}
+              guessedId={feedback?.guess ?? null}
+              locked={quizPhase === 'answered'}
+              onGuess={onGuess}
+            />
+          )}
 
           <Piano highlights={highlights} headerLabel={pianoLabel} headerColor={pianoLabelColor} />
           <Fretboard highlights={highlights} />
@@ -196,11 +208,12 @@ export function TrainPage(props: TrainPageProps) {
 
 function Roadmap({ activeId }: { activeId: string }) {
   const phases = [
-    { id: 'interval', n: 1, label: 'Intervals', color: '#6366f1' },
-    { id: 'distance', n: 2, label: 'Distance',  color: '#8b5cf6' },
-    { id: 'triad',    n: 3, label: 'Chords',    color: '#c084fc' },
-    { id: 'melody',   n: 4, label: 'Melodies',  color: '#fb923c' },
-    { id: null,       n: 5, label: 'More soon', color: null },
+    { id: 'interval',    n: 1, label: 'Intervals',    color: '#6366f1' },
+    { id: 'distance',    n: 2, label: 'Distance',     color: '#8b5cf6' },
+    { id: 'triad',       n: 3, label: 'Chords',       color: '#c084fc' },
+    { id: 'progression', n: 4, label: 'Progressions', color: '#e879f9' },
+    { id: 'melody',      n: 5, label: 'Melodies',     color: '#fb923c' },
+    { id: null,          n: 6, label: 'More soon',    color: null },
   ];
   return (
     <div className="roadmap">
