@@ -23,6 +23,8 @@ import {
   MODE_LEVELS,
   MODE_CLOSE_PAIRS,
   MODE_HINTS,
+  generateModalProgression,
+  type DiatonicTriad,
 } from '../data/modes';
 import { pm, playPhrase, type InstrumentId } from '../audio/engine';
 import type { Exercise, AnswerOption, SongRefPlayable } from './types';
@@ -30,6 +32,8 @@ import type { Exercise, AnswerOption, SongRefPlayable } from './types';
 interface ModePayload {
   modeId: string;
   keyRoot: number;
+  /** The 4-chord progression that was played (for replay). */
+  progression: DiatonicTriad[];
 }
 
 function pick<T>(list: readonly T[], recent: ReadonlyArray<T>): T {
@@ -49,6 +53,8 @@ function voiceChord(root: number, intervals: number[]): number[] {
   return intervals.map((i) => rm + i);
 }
 
+const CHORD_STEP = 1.35; // seconds between chord starts (matches progression exercise)
+
 export const modeHarmonyExercise: Exercise<ModePayload> = {
   id: 'modeHarmony',
   name: 'Modal Harmony',
@@ -61,38 +67,36 @@ export const modeHarmonyExercise: Exercise<ModePayload> = {
     const mode = MODE_MAP[modeId];
 
     let keyRoot = 60 + keyOffset;
-    // Clamp so both tonic and diagnostic chords fit in the soundfont range
-    const maxOffset = Math.max(
-      ...mode.tonic.iv.map((i) => mode.tonic.rootOffset + i),
-      ...mode.diagnostic.iv.map((i) => mode.diagnostic.rootOffset + i),
-    );
-    while (keyRoot + maxOffset > SAMPLE_HI) keyRoot -= 12;
+    // Clamp — the widest chord could be degree 6 (rootOffset ~11) + P5 (7) = 18 above key root
+    while (keyRoot + 18 > SAMPLE_HI) keyRoot -= 12;
     while (keyRoot < SAMPLE_LO) keyRoot += 12;
 
-    // Notes: tonic chord + diagnostic chord (for piano highlights after answer)
-    const tonicNotes = voiceChord(keyRoot + mode.tonic.rootOffset, mode.tonic.iv);
-    const diagNotes = voiceChord(keyRoot + mode.diagnostic.rootOffset, mode.diagnostic.iv);
+    // Generate a 4-chord progression using the mode's diatonic triads
+    const progression = generateModalProgression(mode);
+
+    // Collect all notes for piano highlight after answer
+    const allNotes: number[] = [];
+    for (const ch of progression) {
+      allNotes.push(...voiceChord(keyRoot + ch.rootOffset, ch.iv));
+    }
 
     return {
       root: keyRoot,
-      notes: [...tonicNotes, ...diagNotes],
-      payload: { modeId, keyRoot },
+      notes: allNotes,
+      payload: { modeId, keyRoot, progression },
       pickId: modeId,
+      displayLabel: '4-chord modal progression',
     };
   },
 
   play(q, instId: InstrumentId) {
-    const { modeId, keyRoot } = q.payload;
-    const mode = MODE_MAP[modeId];
+    const { keyRoot, progression } = q.payload;
 
-    // Play tonic chord (stacked), pause, then diagnostic chord (stacked)
-    const tonicNotes = voiceChord(keyRoot + mode.tonic.rootOffset, mode.tonic.iv);
-    const diagNotes = voiceChord(keyRoot + mode.diagnostic.rootOffset, mode.diagnostic.iv);
-
-    // Tonic at t=0
-    tonicNotes.forEach((n) => pm(instId, n, 0));
-    // Diagnostic at t=1.2s
-    diagNotes.forEach((n) => pm(instId, n, 1.2));
+    progression.forEach((ch, idx) => {
+      const notes = voiceChord(keyRoot + ch.rootOffset, ch.iv);
+      const startAt = idx * CHORD_STEP;
+      notes.forEach((n) => pm(instId, n, startAt));
+    });
   },
 
   answers(levelIndex): AnswerOption[] {
@@ -116,7 +120,7 @@ export const modeHarmonyExercise: Exercise<ModePayload> = {
 
   getHint(correctId, guessId) {
     const key = `${guessId}_${correctId}`;
-    return MODE_HINTS[key] ?? 'Close! Listen to the second chord — it\'s the diagnostic move that defines the mode.';
+    return MODE_HINTS[key] ?? 'Close! Listen for the chord that doesn\'t belong to a standard major or minor key.';
   },
 
   feedback(answerId) {
@@ -134,11 +138,12 @@ export const modeHarmonyExercise: Exercise<ModePayload> = {
       reference: mode.hint,
       songRefs,
       demoPlay: (instId: InstrumentId) => {
-        // Play the diagnostic pair from C4
-        const tonicNotes = voiceChord(60 + mode.tonic.rootOffset, mode.tonic.iv);
-        const diagNotes = voiceChord(60 + mode.diagnostic.rootOffset, mode.diagnostic.iv);
-        tonicNotes.forEach((n) => pm(instId, n, 0));
-        diagNotes.forEach((n) => pm(instId, n, 1.2));
+        // Play a fresh 4-chord modal progression from C4
+        const prog = generateModalProgression(mode);
+        prog.forEach((ch, idx) => {
+          const notes = voiceChord(60 + ch.rootOffset, ch.iv);
+          notes.forEach((n) => pm(instId, n, idx * CHORD_STEP));
+        });
       },
     };
   },

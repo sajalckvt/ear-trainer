@@ -98,8 +98,9 @@ export function ProgressionAnswerBuilder({
       onReviewSlot?.(idx);
       return;
     }
-    // Entry mode: move cursor to this slot so the next pick replaces it
+    // Entry mode: move cursor AND replay the exercise's chord at this position
     setCursor(idx);
+    onReviewSlot?.(idx);
   };
 
   const handleClear = () => {

@@ -303,3 +303,59 @@ export const MODE_HINTS: Record<string, string> = {
   'phrygian_locrian':   'Close! Both have a ♭2. But Locrian\'s tonic chord is diminished (tritone in the root chord).',
   'locrian_phrygian':   'Close! Both have a ♭2. But Phrygian\'s tonic is a regular minor chord, not diminished.',
 };
+
+// ─── Diatonic triad helper ────────────────────────────────────────────────
+// Builds the 7 diatonic triads from a mode's scale intervals.
+
+export interface DiatonicTriad {
+  /** Semitone offset from the mode's tonic. */
+  rootOffset: number;
+  /** Chord intervals from that root [0, third, fifth]. */
+  iv: number[];
+  /** Degree index 0-6. */
+  degree: number;
+}
+
+export function buildDiatonicTriads(scale: number[]): DiatonicTriad[] {
+  return scale.map((rootIv, idx) => {
+    const thirdIdx = (idx + 2) % 7;
+    const fifthIdx = (idx + 4) % 7;
+    let thirdIv = scale[thirdIdx] - rootIv;
+    let fifthIv = scale[fifthIdx] - rootIv;
+    if (thirdIv < 0) thirdIv += 12;
+    if (fifthIv < 0) fifthIv += 12;
+    return { rootOffset: rootIv, iv: [0, thirdIv, fifthIv], degree: idx };
+  });
+}
+
+/**
+ * Generate a 4-chord modal progression that always includes the tonic (degree 0)
+ * at position 1 and the diagnostic chord somewhere in the middle.
+ * Fills the remaining slots with other diatonic triads (no immediate repeats).
+ */
+export function generateModalProgression(mode: ModeDefinition): DiatonicTriad[] {
+  const triads = buildDiatonicTriads(mode.scale);
+  const tonic = triads[0];
+
+  // Find the diagnostic chord in the diatonic set (closest match by rootOffset)
+  const diagTriad = triads.find((t) => t.rootOffset === mode.diagnostic.rootOffset) ?? triads[1];
+
+  // Pool of other triads (not tonic, not diagnostic)
+  const others = triads.filter((t) => t !== tonic && t !== diagTriad);
+
+  // Shuffle others
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [others[i], others[j]] = [others[j], others[i]];
+  }
+
+  // Build: tonic, [random], diagnostic, [random or tonic]
+  const prog: DiatonicTriad[] = [
+    tonic,
+    others[0] ?? tonic,
+    diagTriad,
+    Math.random() < 0.5 ? tonic : (others[1] ?? tonic),
+  ];
+
+  return prog;
+}

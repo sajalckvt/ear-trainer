@@ -145,7 +145,6 @@ export function TrainPage(props: TrainPageProps) {
   // sets the highlight index. Only valid once the answer is locked in.
   const handleSlotReview = (idx: number) => {
     if (!question) return;
-    if (quizPhase !== 'answered') return;
     clearProgTimers();
     setProgChordIdx(idx);
     playProgressionChord(question as { payload: ProgressionPayload }, idx, instrument);
@@ -203,14 +202,7 @@ export function TrainPage(props: TrainPageProps) {
       // revealed and the step-through review is enabled.
       const payload = question.payload as ProgressionPayload;
       if (quizPhase === 'answered' && progChordIdx !== null) {
-        const dim = '#3a3a5e';
         const live = '#a78bfa';
-        if (progChordIdx > 0) {
-          const prev = progressionChordNotes(
-            question as { payload: ProgressionPayload }, progChordIdx - 1,
-          );
-          prev.forEach((n) => { highlights[n] = dim; });
-        }
         const curr = progressionChordNotes(
           question as { payload: ProgressionPayload }, progChordIdx,
         );
