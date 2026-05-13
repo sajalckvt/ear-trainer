@@ -147,19 +147,109 @@ function ChordsSection({ instrument }: { instrument: InstrumentId }) {
 }
 
 // ─── Modes section ──────────────────────────────────────────────────────────
-// Placeholder. Content lands when the Modes exercise + reference data ship.
-function ModesSection({ instrument: _instrument }: { instrument: InstrumentId }) {
+// Shows each mode's scale, diagnostic chord pair (tappable), signature
+// note, hint, and song mnemonics. Matches the data in src/data/modes.ts.
+
+import { MODES } from '../data/modes';
+
+function ModesSection({ instrument }: { instrument: InstrumentId }) {
+  const keyRoot = 60; // C4
+
+  const playScale = (scaleIntervals: number[]) => {
+    scaleIntervals.forEach((iv, i) => {
+      let n = keyRoot + iv;
+      while (n > 79) n -= 12;
+      while (n < 57) n += 12;
+      pm(instrument, n, i * 0.25);
+    });
+    // Finish with the octave
+    pm(instrument, keyRoot + 12 > 79 ? keyRoot : keyRoot + 12, scaleIntervals.length * 0.25);
+  };
+
+  const playChordPair = (mode: typeof MODES[number]) => {
+    const voiceChordLocal = (root: number, intervals: number[]) => {
+      let rm = root;
+      while (rm + Math.max(...intervals) > 79) rm -= 12;
+      while (rm < 57) rm += 12;
+      return intervals.map((i: number) => rm + i);
+    };
+    const tonicNotes = voiceChordLocal(keyRoot + mode.tonic.rootOffset, mode.tonic.iv);
+    const diagNotes = voiceChordLocal(keyRoot + mode.diagnostic.rootOffset, mode.diagnostic.iv);
+    tonicNotes.forEach((n: number) => pm(instrument, n, 0));
+    diagNotes.forEach((n: number) => pm(instrument, n, 1.2));
+  };
+
   return (
-    <div style={{
-      padding: '32px 16px', textAlign: 'center',
-      color: '#666', fontSize: 13, lineHeight: 1.6,
-    }}>
-      <div style={{ fontSize: 24, marginBottom: 8 }}>🎼</div>
-      <div style={{ color: '#aaa', fontWeight: 600, marginBottom: 4 }}>Modes — coming soon</div>
-      <div>
-        Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian — each with its signature flavour, diagnostic chord pair, and song mnemonics. Stay tuned.
+    <>
+      <div style={{ fontSize: 12, color: '#888', marginBottom: 12, lineHeight: 1.5 }}>
+        Every mode has a <b style={{ color: '#ccc' }}>signature flavour</b>. Below: the scale, the
+        diagnostic chord pair that identifies it, and songs you already know in that mode.
+        Tap <b style={{ color: '#a78bfa' }}>▶ Scale</b> to hear the ascending scale, or <b style={{ color: '#a78bfa' }}>▶ Pair</b> to
+        hear the two-chord diagnostic.
       </div>
-    </div>
+
+      {MODES.map((mode) => (
+        <div key={mode.id} className="rc" style={{ marginBottom: 8 }}>
+          <div style={{ padding: '10px 12px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{
+                display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+                background: mode.co, flexShrink: 0,
+              }} />
+              <span style={{ fontWeight: 700, color: '#d4d4d8', fontSize: 14 }}>{mode.n}</span>
+              <span style={{ fontSize: 11, color: '#666', marginLeft: 'auto' }}>
+                {mode.tonality} tonic
+              </span>
+            </div>
+
+            {/* Feel + signature */}
+            <div style={{ fontSize: 12, color: '#aaa', lineHeight: 1.5, marginBottom: 6 }}>
+              {mode.ex}
+            </div>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>
+              <b style={{ color: '#ccc' }}>Signature:</b> {mode.signature}
+            </div>
+
+            {/* Hint */}
+            <div style={{
+              fontSize: 11, color: '#a78bfa', lineHeight: 1.5,
+              padding: '6px 10px', background: 'rgba(99, 102, 241, 0.06)',
+              borderRadius: 8, marginBottom: 8,
+            }}>
+              💡 {mode.hint}
+            </div>
+
+            {/* Diagnostic pair label */}
+            <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>
+              Diagnostic pair: <b style={{ color: '#ccc' }}>{mode.tonic.rn} → {mode.diagnostic.rn}</b>
+            </div>
+
+            {/* Play buttons */}
+            <div className="ag" style={{ marginBottom: 8 }}>
+              <button className="ab" style={{ minWidth: 0, padding: '6px 12px' }} onClick={() => playScale(mode.scale)}>
+                <span style={{ fontSize: 11 }}>▶ Scale</span>
+              </button>
+              <button className="ab" style={{ minWidth: 0, padding: '6px 12px' }} onClick={() => playChordPair(mode)}>
+                <span style={{ fontSize: 11 }}>▶ Pair ({mode.tonic.rn} → {mode.diagnostic.rn})</span>
+              </button>
+            </div>
+
+            {/* Song refs */}
+            {mode.songs.length > 0 && (
+              <div style={{ fontSize: 11, color: '#666', lineHeight: 1.6 }}>
+                {mode.songs.map((s, i) => (
+                  <div key={i} style={{ marginBottom: 2 }}>
+                    <span style={{ color: '#aaa' }}>{s.title}</span>
+                    {s.hint && <span style={{ color: '#555' }}> — {s.hint}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </>
   );
 }
 
