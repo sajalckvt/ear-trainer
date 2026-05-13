@@ -85,6 +85,11 @@ export const PROGRESSION_LEVELS: ProgressionLevel[] = [
     minLen: 3, maxLen: 4,
   },
   {
+    n: 'Pop Triads',
+    ch: ['I', 'IV', 'V', 'vi'],
+    minLen: 3, maxLen: 4,
+  },
+  {
     n: 'All Triads',
     ch: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'],
     minLen: 3, maxLen: 4,

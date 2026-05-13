@@ -47,7 +47,7 @@ export function Piano({ highlights, headerLabel, headerColor }: PianoProps) {
                     : 'linear-gradient(180deg, #fafafa, #e4e4e4)',
                   color: hl ? '#fff' : '#aaa',
                   boxShadow: hl
-                    ? `0 4px 20px ${hl}55`
+                    ? 'none'
                     : 'inset 0 -2px 4px rgba(0,0,0,.05)',
                 }}
               >
