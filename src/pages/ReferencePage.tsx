@@ -1,6 +1,7 @@
 import { NN, ND, IVS, CHORDS, INSTS } from '../data/constants';
+import { PROGRESSION_CHORDS } from '../data/progressions';
 import { pn, pm, type InstrumentId } from '../audio/engine';
-import { m2n } from '../audio/theory';
+import { m2n, m2d } from '../audio/theory';
 import { InstrumentPicker } from '../components/Controls';
 
 interface ReferencePageProps {
@@ -70,6 +71,15 @@ export function ReferencePage({ visible, instrument, onInstrumentChange }: Refer
           In any key, each chord has a <i>function</i> — does it feel like home, does it want to push, does it lean back? Three families: Tonic, Subdominant, Dominant. Tap each demo to hear how it resolves.
         </div>
         <ChordFunctionSheet instrument={instrument} />
+      </div>
+
+      {/* Diatonic chord reference */}
+      <div style={{ marginTop: 16 }}>
+        <div className="bl" style={{ marginBottom: 10 }}>Diatonic chord reference · Roman numerals in C major</div>
+        <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
+          Every chord you can build using only notes from the C major scale. Each one has a Roman-numeral name (I, ii, iii…) that tells you which scale degree it's built on. Tap to hear.
+        </div>
+        <DiatonicChordSheet instrument={instrument} />
       </div>
 
       {/* Cadence voicings */}
@@ -289,6 +299,70 @@ function ChordFunctionSheet({ instrument }: { instrument: InstrumentId }) {
       </div>
     </>
   );
+}
+
+function DiatonicChordSheet({ instrument }: { instrument: InstrumentId }) {
+  // Group by triads vs sevenths so the visual layout shows the family ladder
+  const triadIds = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+  const seventhIds = ['Imaj7', 'ii7', 'iii7', 'IVmaj7', 'V7', 'vi7', 'viiø7'];
+
+  const sections = [
+    { l: 'Triads (3-note chords)', ids: triadIds },
+    { l: '7th chords (4-note extensions)', ids: seventhIds },
+  ];
+
+  // Voice each chord around middle C (the C major key tonic)
+  const keyRoot = 60;
+
+  const playChord = (rootOffset: number, intervals: number[]) => {
+    let rm = keyRoot + rootOffset;
+    // Drop an octave if the chord runs too high (e.g. vii° with root B4 + 6 = F5 is fine,
+    // but viiø7 with root B4 + 10 = A5 is too high for the soundfont)
+    while (rm + Math.max(...intervals) > 79) rm -= 12;
+    while (rm < 57) rm += 12;
+    // Arpeggio then stacked, matching ChordReferenceSheet's behaviour
+    intervals.forEach((iv, idx) => pm(instrument, rm + iv, idx * 0.22));
+    const chordAt = intervals.length * 0.22 + 0.15;
+    intervals.forEach((iv) => pm(instrument, rm + iv, chordAt));
+  };
+
+  return (
+    <>
+      {sections.map((sec) => (
+        <div key={sec.l}>
+          <div className="rsec">{sec.l}</div>
+          {sec.ids.map((id) => {
+            const ch = PROGRESSION_CHORDS.find((c) => c.id === id);
+            if (!ch) return null;
+            return (
+              <div key={id} className="rc">
+                <div className="rcr">
+                  <div className="rcb" style={{ background: ch.co }}>
+                    <span>{ch.sh}</span>
+                  </div>
+                  <div className="rcn">
+                    <span className="rn">{ch.n}</span>
+                    <span className="rs">{ch.ex}</span>
+                    <span className="formula" style={{ textTransform: 'capitalize' }}>{ch.fn} function</span>
+                  </div>
+                  <div className="rcs" onClick={() => playChord(ch.rootOffset, ch.iv)}>
+                    <div style={{ fontWeight: 600, color: '#ccc' }}>{noteNamesForChord(keyRoot + ch.rootOffset, ch.iv)}</div>
+                    <div className="alt">Tap to hear</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** Helper: render the actual note letters of a chord in close root position
+ *  starting from `rootMidi`. e.g. (60, [0,4,7]) → "C–E–G". */
+function noteNamesForChord(rootMidi: number, intervals: number[]): string {
+  return intervals.map((iv) => m2d(rootMidi + iv).replace(/\d/g, '')).join('–');
 }
 
 // Also export INSTS type usage for tree-shaking unification
