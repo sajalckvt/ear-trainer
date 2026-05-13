@@ -63,6 +63,15 @@ export function ReferencePage({ visible, instrument, onInstrumentChange }: Refer
       </div>
       <ChordReferenceSheet instrument={instrument} />
 
+      {/* Chord function in a key */}
+      <div style={{ marginTop: 16 }}>
+        <div className="bl" style={{ marginBottom: 10 }}>Chord function · how chords behave in a key</div>
+        <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
+          In any key, each chord has a <i>function</i> — does it feel like home, does it want to push, does it lean back? Three families: Tonic, Subdominant, Dominant. Tap each demo to hear how it resolves.
+        </div>
+        <ChordFunctionSheet instrument={instrument} />
+      </div>
+
       {/* Cadence voicings */}
       <div style={{ marginTop: 16 }}>
         <div className="bl" style={{ marginBottom: 10 }}>Cadence voicings</div>
@@ -194,6 +203,91 @@ function CadenceVoicings({ instrument }: { instrument: InstrumentId }) {
         </button>
       ))}
     </div>
+  );
+}
+
+function ChordFunctionSheet({ instrument }: { instrument: InstrumentId }) {
+  // C major reference: I = C(60,64,67), ii = Dm(62,65,69),
+  // IV = F(65,69,72), V = G(67,71,74), vi = Am(69,72,76), V7 = G7(67,71,74,77)
+  const C  = [60, 64, 67];
+  const Dm = [62, 65, 69];
+  const F  = [65, 69, 72];
+  const G  = [67, 71, 74];
+  const Am = [69, 72, 76];
+  const G7 = [67, 71, 74, 77];
+
+  // Play a sequence of chords; each chord rings, next plays after gap (default 0.9s)
+  const playSeq = (chords: number[][], gap = 0.9) => {
+    chords.forEach((ch, i) => {
+      ch.forEach((n) => pm(instrument, n, i * gap));
+    });
+  };
+
+  const families = [
+    {
+      title: 'Tonic — home',
+      color: '#22c55e',
+      blurb: 'The chord built on the 1st degree of the key. Feels resolved, settled, "home". When music returns to the tonic it feels finished. In C major: I = C. The relative minor (vi = Am) and iii also have a tonic-like flavour because they share most notes with I.',
+      examples: [
+        { n: 'I (C major) — home, no tension', play: () => playSeq([C]) },
+        { n: 'vi (Am) — soft tonic substitute', play: () => playSeq([Am]) },
+        { n: 'V → I — dominant resolves home', play: () => playSeq([G, C]) },
+      ],
+    },
+    {
+      title: 'Subdominant — push away',
+      color: '#3b82f6',
+      blurb: 'The chord on the 4th degree (IV) — feels like stepping away from home, opening a window. Doesn\'t feel restless like the dominant, but it doesn\'t feel resolved either. The ii chord also functions as subdominant (it shares notes with IV). In C major: IV = F, ii = Dm.',
+      examples: [
+        { n: 'I → IV — stepping out', play: () => playSeq([C, F]) },
+        { n: 'I → ii — softer subdominant', play: () => playSeq([C, Dm]) },
+        { n: 'IV → I — a "plagal" resolution (amen)', play: () => playSeq([F, C]) },
+      ],
+    },
+    {
+      title: 'Dominant — wants to resolve',
+      color: '#f43f5e',
+      blurb: 'The chord on the 5th degree (V). Contains a tritone (in V7) that creates tension — it strongly wants to resolve back to I. This "V wants to go to I" is the engine of Western harmony. Any time you build tension, you usually build a V chord. In C major: V = G, V7 = G7. The vii° (Bdim) also has dominant function — it shares the tritone with V7.',
+      examples: [
+        { n: 'V → I — classic resolution', play: () => playSeq([G, C]) },
+        { n: 'V7 → I — even stronger pull (tritone)', play: () => playSeq([G7, C]) },
+        { n: 'I → IV → V → I (full circle)', play: () => playSeq([C, F, G, C], 0.8) },
+        { n: 'V → vi (deceptive — "fakes" home)', play: () => playSeq([G, Am]) },
+      ],
+    },
+  ];
+
+  return (
+    <>
+      {families.map((fam) => (
+        <div key={fam.title} className="rc">
+          <div className="rcr" style={{ display: 'block' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <span
+                style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: fam.color, flexShrink: 0,
+                }}
+              />
+              <span style={{ fontWeight: 700, color: '#d4d4d8', fontSize: 13 }}>{fam.title}</span>
+            </div>
+            <div style={{ fontSize: 12, color: '#888', lineHeight: 1.5, marginBottom: 10 }}>
+              {fam.blurb}
+            </div>
+            <div className="ag" style={{ marginTop: 4 }}>
+              {fam.examples.map((ex) => (
+                <button key={ex.n} className="ab" style={{ minWidth: 0, padding: '6px 10px' }} onClick={ex.play}>
+                  <span style={{ fontSize: 11 }}>{ex.n}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+      <div style={{ fontSize: 11, color: '#666', lineHeight: 1.5, marginTop: 8 }}>
+        <strong style={{ color: '#888' }}>Roman numerals:</strong> capital = major chord (I, IV, V), lowercase = minor chord (ii, iii, vi), ° = diminished (vii°). The number tells you which scale degree the chord is built on.
+      </div>
+    </>
   );
 }
 
