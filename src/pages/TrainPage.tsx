@@ -381,7 +381,7 @@ function Roadmap({ activeId }: { activeId: string }) {
     { id: 'triad',       n: 3, label: 'Chords',       color: '#c084fc' },
     { id: 'progression', n: 4, label: 'Progressions', color: '#e879f9' },
     { id: 'modeHarmony', n: 5, label: 'Modes',        color: '#06b6d4' },
-    { id: 'melody',      n: 6, label: 'Melodies',     color: '#fb923c' },
+    { id: 'scaleId',     n: 6, label: 'Scales',       color: '#10b981' },
     { id: null,          n: 7, label: 'More soon',    color: null },
   ];
   return (

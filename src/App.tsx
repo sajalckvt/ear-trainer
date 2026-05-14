@@ -53,7 +53,7 @@ export default function App() {
     <div className="app">
       <div className="hdr">
         <h1>♪ Ear Trainer</h1>
-        <div className="sub">Intervals · Distance · Chords · Progressions · Modes · Melodies</div>
+        <div className="sub">Intervals · Distance · Chords · Progressions · Modes · Scales</div>
       </div>
 
       <NavTabs screen={screen} onChange={setScreen} />
