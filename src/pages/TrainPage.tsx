@@ -83,6 +83,65 @@ export function TrainPage(props: TrainPageProps) {
   const [sheetDismissed, setSheetDismissed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // ─── Audio playing state ──────────────────────────────────────────────────
+  // quizPhase === 'playing' stays true until the user answers, which is much
+  // longer than the audio itself. We track the actual audio duration separately
+  // so the Replay button waveform animation stops when the sound finishes.
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const startAudioTimer = (durationMs: number) => {
+    if (audioTimerRef.current) clearTimeout(audioTimerRef.current);
+    setIsAudioPlaying(true);
+    audioTimerRef.current = setTimeout(() => setIsAudioPlaying(false), durationMs);
+  };
+
+  // Estimate how long a question's audio will take to finish.
+  // This matches the timing constants used in each exercise's play() function.
+  const estimateAudioDuration = (q: typeof question): number => {
+    if (!q) return 0;
+    const cadenceMs = cadenceEnabled ? 1800 : 0;
+    const id = activeExercise.id;
+
+    if (id === 'interval' || id === 'distance') {
+      // Two notes, 750ms apart + 500ms ring
+      return cadenceMs + 750 + 800;
+    }
+    if (id === 'triad' || id === 'modeHarmony') {
+      // Arpeggio (n notes × 0.3s) + chord stab + ring
+      const noteCount = q.notes.length > 6 ? 3 : q.notes.length; // cap for chords
+      return cadenceMs + noteCount * 300 + 600;
+    }
+    if (id === 'scaleId') {
+      // Ascending + descending: (n*2 + 1) notes × 0.22s + ring
+      const scaleLen = q.notes.length;
+      return cadenceMs + scaleLen * 220 + 500;
+    }
+    if (id === 'progression') {
+      const chordCount = (q.payload as { chordIds: string[] }).chordIds?.length ?? 4;
+      return cadenceMs + chordCount * CHORD_STEP * 1000 + 600;
+    }
+    // Fallback: generous 4s
+    return cadenceMs + 4000;
+  };
+
+  // Start the audio timer whenever a new question begins playing
+  useEffect(() => {
+    if (quizPhase === 'playing' && question) {
+      startAudioTimer(estimateAudioDuration(question));
+    }
+    if (quizPhase === 'answered' || quizPhase === 'idle') {
+      setIsAudioPlaying(false);
+      if (audioTimerRef.current) clearTimeout(audioTimerRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizPhase, question?.pickId]);
+
+  // Clear timer on unmount
+  useEffect(() => () => {
+    if (audioTimerRef.current) clearTimeout(audioTimerRef.current);
+  }, []);
+
   // ─── Progression playback animation ───────────────────────────────────────
   // For the progression exercise, we step a `progChordIdx` index forward in
   // sync with audio playback so piano/fretboard/slots all highlight only the
@@ -125,6 +184,7 @@ export function TrainPage(props: TrainPageProps) {
   // call since replays don't generate a new question.
   const handleReplay = () => {
     onReplay();
+    if (question) startAudioTimer(estimateAudioDuration(question));
     if (activeExercise.id === 'progression' && question) {
       const chordCount = (question.payload as ProgressionPayload).chordIds.length;
       const cadenceDelay = cadenceEnabled ? 1800 : 0;
@@ -391,7 +451,7 @@ export function TrainPage(props: TrainPageProps) {
             feedback={feedback ? { ok: feedback.ok } : null}
             correctLabel={quizPhase === 'answered' ? correctLabel : null}
             feedbackInfo={quizPhase === 'answered' ? feedbackInfo : null}
-            isPlaying={quizPhase === 'playing'}
+            isPlaying={isAudioPlaying}
             onStart={onStart}
             onReplay={handleReplay}
             onNext={handleNext}
