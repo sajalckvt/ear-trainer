@@ -8,6 +8,7 @@ interface PlayAreaProps {
   feedback: { ok: boolean } | null;
   correctLabel: string | null;
   feedbackInfo: FeedbackInfo | null;
+  isPlaying: boolean;
   onStart: () => void;
   onReplay: () => void;
   onNext: () => void;
@@ -19,6 +20,7 @@ export function PlayArea({
   feedback,
   correctLabel,
   feedbackInfo,
+  isPlaying,
   onStart,
   onReplay,
   onNext,
@@ -54,12 +56,23 @@ export function PlayArea({
           </div>
         )}
 
-        {rootMidi !== null && (
+        {rootMidi !== null && !feedback && (
           <div className="root-label">Root: {m2d(rootMidi)}</div>
         )}
 
         <div className="arow">
-          <button className="abtn rpb" onClick={onReplay}>🔈 Replay</button>
+          <button
+            className={`abtn rpb${isPlaying ? ' playing' : ''}`}
+            onClick={onReplay}
+            aria-label="Replay"
+          >
+            {isPlaying ? (
+              <span className="wave-bars" aria-hidden="true">
+                <span /><span /><span /><span /><span />
+              </span>
+            ) : '🔈'}
+            {' '}Replay
+          </button>
           {feedback && <button className="abtn nxb" onClick={onNext}>Next →</button>}
         </div>
       </div>

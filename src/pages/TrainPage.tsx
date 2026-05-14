@@ -81,6 +81,7 @@ export function TrainPage(props: TrainPageProps) {
   } = props;
 
   const [sheetDismissed, setSheetDismissed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // ─── Progression playback animation ───────────────────────────────────────
   // For the progression exercise, we step a `progChordIdx` index forward in
@@ -231,20 +232,27 @@ export function TrainPage(props: TrainPageProps) {
       }
     } else if (activeExercise.id === 'scaleId') {
       // ── Scale: show only root pre-answer; ascending notes post-answer.
-      // Descending notes excluded — showing both up and down was the mess.
+      // Each scale degree gets a distinct color (rainbow) so the pattern
+      // is readable and position is visible at a glance.
       highlights[question.root] = '#6366f1';
       if (quizPhase === 'answered' && feedbackInfo) {
         const scalePayload = question.payload as { scaleId: string; keyRoot: number };
         const scale = SCALE_MAP[scalePayload.scaleId];
         if (scale) {
-          const accent = scale.co;
-          const softer = accent + '99'; // 60% opacity via hex alpha
-          scale.intervals.forEach((iv) => {
+          // One distinct color per scale degree so the layout is visible
+          const degreeColors = [
+            '#f43f5e', '#f97316', '#eab308', '#22c55e',
+            '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef',
+          ];
+          scale.intervals.forEach((iv, degIdx) => {
             const n = scalePayload.keyRoot + iv;
-            highlights[n] = iv === 0 ? accent : softer;
+            if (n >= 57 && n <= 79) {
+              highlights[n] = degreeColors[degIdx % degreeColors.length];
+            }
           });
+          // Octave — same color as root (degree 0)
           const octave = scalePayload.keyRoot + 12;
-          if (octave <= 79) highlights[octave] = accent;
+          if (octave <= 79) highlights[octave] = degreeColors[0];
         }
       }
     } else {
@@ -304,14 +312,53 @@ export function TrainPage(props: TrainPageProps) {
         showDirection={activeExercise.usesDirection}
         direction={direction} onDirectionChange={onDirectionChange}
       />
-      {activeExercise.id === 'distance' && (
-        <DistanceDirectionToggle value={distanceDirection} onChange={onDistanceDirectionChange} />
+
+      {/* ── Settings (collapsed by default) ── */}
+      {activeExercise.id !== 'melody' && (() => {
+        // Build badge summary of active settings for the collapsed state
+        const badges: string[] = [];
+        badges.push(keyName);
+        if (cadenceEnabled) badges.push('cadence');
+        if (activeExercise.id === 'triad') {
+          if (spread) badges.push('spread');
+          if (!arpeggio) badges.push('stacked');
+        }
+        if (activeExercise.id === 'distance' && distanceDirection !== 'both')
+          badges.push(distanceDirection === 'asc' ? '↑ asc' : '↓ desc');
+        if (activeExercise.id === 'modeHarmony' && modeChordCount !== 2)
+          badges.push(`${modeChordCount} chords`);
+
+        return (
+          <div className="settings-bar">
+            <div className="settings-badges">
+              {badges.map((b) => (
+                <span key={b} className="setting-badge">{b}</span>
+              ))}
+            </div>
+            <button
+              className="settings-toggle"
+              onClick={() => setSettingsOpen((v) => !v)}
+              aria-expanded={settingsOpen}
+            >
+              {settingsOpen ? '✕ Close' : '⚙ Settings'}
+            </button>
+          </div>
+        );
+      })()}
+
+      {settingsOpen && activeExercise.id !== 'melody' && (
+        <div className="settings-panel">
+          <KeyRow keyName={keyName} onChange={onKeyChange} />
+          <CadenceToggle on={cadenceEnabled} onChange={onCadenceChange} />
+          {activeExercise.id === 'triad' && <SpreadToggle on={spread} onChange={onSpreadChange} />}
+          {activeExercise.id === 'triad' && <ArpeggioToggle on={arpeggio} onChange={onArpeggioChange} />}
+          {activeExercise.id === 'distance' && (
+            <DistanceDirectionToggle value={distanceDirection} onChange={onDistanceDirectionChange} />
+          )}
+          {activeExercise.id === 'modeHarmony' && <ModeChordCountToggle value={modeChordCount} onChange={onModeChordCountChange} />}
+        </div>
       )}
-      {activeExercise.id !== 'melody' && <KeyRow keyName={keyName} onChange={onKeyChange} />}
-      {activeExercise.id !== 'melody' && <CadenceToggle on={cadenceEnabled} onChange={onCadenceChange} />}
-      {activeExercise.id === 'triad' && <SpreadToggle on={spread} onChange={onSpreadChange} />}
-      {activeExercise.id === 'triad' && <ArpeggioToggle on={arpeggio} onChange={onArpeggioChange} />}
-      {activeExercise.id === 'modeHarmony' && <ModeChordCountToggle value={modeChordCount} onChange={onModeChordCountChange} />}
+
       <InstrumentPicker instrument={instrument} onChange={onInstrumentChange} />
 
       <ScoreBar
@@ -344,6 +391,7 @@ export function TrainPage(props: TrainPageProps) {
             feedback={feedback ? { ok: feedback.ok } : null}
             correctLabel={quizPhase === 'answered' ? correctLabel : null}
             feedbackInfo={quizPhase === 'answered' ? feedbackInfo : null}
+            isPlaying={quizPhase === 'playing'}
             onStart={onStart}
             onReplay={handleReplay}
             onNext={handleNext}
