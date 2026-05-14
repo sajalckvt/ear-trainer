@@ -63,6 +63,8 @@ export interface Exercise<TPayload = unknown> {
     /** Distance exercise direction — separate from `direction` because
      *  Distance also supports 'both' (the original random behaviour). */
     distanceDirection?: 'asc' | 'desc' | 'both';
+    /** Number of chords in the modal harmony exercise (default 2). */
+    modeChordCount?: number;
   }): Question & { payload: TPayload; pickId: string | number };
 
   play(

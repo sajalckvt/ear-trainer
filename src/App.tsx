@@ -23,6 +23,7 @@ export default function App() {
   const [cadenceEnabled, setCadenceEnabled] = useState<boolean>(false);
   const [spread, setSpread] = useState<boolean>(false);
   const [arpeggio, setArpeggio] = useState<boolean>(true);
+  const [modeChordCount, setModeChordCount] = useState<number>(2);
   const [distanceDirection, setDistanceDirection] = useState<'asc' | 'desc' | 'both'>('both');
   const [instrument, setInstrument] = useState<InstrumentId>('acoustic_grand_piano');
 
@@ -32,7 +33,7 @@ export default function App() {
   );
 
   const { session, nextQuestion, replay, answer, resetScore, resetQuestion } = useQuizState({
-    exercise: activeExercise, levelIndex, keyName, direction, distanceDirection, cadenceEnabled, spread, arpeggio, instrument,
+    exercise: activeExercise, levelIndex, keyName, direction, distanceDirection, cadenceEnabled, spread, arpeggio, modeChordCount, instrument,
   });
 
   const { formatted: timerLabel, reset: resetTimer } = useTrainingTimer();
@@ -52,7 +53,7 @@ export default function App() {
     <div className="app">
       <div className="hdr">
         <h1>♪ Ear Trainer</h1>
-        <div className="sub">Intervals · Distance · Chords · Melodies</div>
+        <div className="sub">Intervals · Distance · Chords · Progressions · Modes · Scales</div>
       </div>
 
       <NavTabs screen={screen} onChange={setScreen} />
@@ -76,6 +77,8 @@ export default function App() {
         onArpeggioChange={setArpeggio}
         distanceDirection={distanceDirection}
         onDistanceDirectionChange={setDistanceDirection}
+        modeChordCount={modeChordCount}
+        onModeChordCountChange={setModeChordCount}
         instrument={instrument}
         onInstrumentChange={setInstrument}
         question={session.question}

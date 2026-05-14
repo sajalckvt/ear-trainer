@@ -33,6 +33,8 @@ interface ProgressionAnswerBuilderProps {
   onSubmit: (joined: string) => void;
   /** Called when the user taps a slot post-answer to review that chord. */
   onReviewSlot?: (idx: number) => void;
+  /** Called when user picks a chord (pre-answer) — plays that chord so the user hears what they selected. */
+  onPlayChord?: (chordId: string) => void;
 }
 
 export function ProgressionAnswerBuilder({
@@ -44,6 +46,7 @@ export function ProgressionAnswerBuilder({
   activeChordIdx,
   onSubmit,
   onReviewSlot,
+  onPlayChord,
 }: ProgressionAnswerBuilderProps) {
   // Local in-progress slot fill state. Reset whenever slotCount changes
   // (i.e. when a new question begins).
@@ -70,6 +73,9 @@ export function ProgressionAnswerBuilder({
     if (locked) return;
     if (cursor >= slotCount) return;
 
+    // Play the chord so the user hears what they selected
+    onPlayChord?.(String(id));
+
     const newSlots = [...slots];
     newSlots[cursor] = String(id);
 
@@ -92,8 +98,9 @@ export function ProgressionAnswerBuilder({
       onReviewSlot?.(idx);
       return;
     }
-    // Entry mode: move cursor to this slot so the next pick replaces it
+    // Entry mode: move cursor AND replay the exercise's chord at this position
     setCursor(idx);
+    onReviewSlot?.(idx);
   };
 
   const handleClear = () => {

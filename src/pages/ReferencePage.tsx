@@ -147,17 +147,288 @@ function ChordsSection({ instrument }: { instrument: InstrumentId }) {
 }
 
 // ─── Modes section ──────────────────────────────────────────────────────────
-// Placeholder. Content lands when the Modes exercise + reference data ship.
-function ModesSection({ instrument: _instrument }: { instrument: InstrumentId }) {
+
+import { MODES } from '../data/modes';
+import { SCALES } from '../data/scales';
+
+function ModesSection({ instrument }: { instrument: InstrumentId }) {
+  const [subTab, setSubTab] = useState<'modes' | 'scales'>('modes');
+
   return (
-    <div style={{
-      padding: '32px 16px', textAlign: 'center',
-      color: '#666', fontSize: 13, lineHeight: 1.6,
-    }}>
-      <div style={{ fontSize: 24, marginBottom: 8 }}>🎼</div>
-      <div style={{ color: '#aaa', fontWeight: 600, marginBottom: 4 }}>Modes — coming soon</div>
-      <div>
-        Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian — each with its signature flavour, diagnostic chord pair, and song mnemonics. Stay tuned.
+    <>
+      {/* Sub-toggle: Modes | Scales */}
+      <div className="ctrl-row" style={{ marginBottom: 14 }}>
+        <div className="pg">
+          {(['modes', 'scales'] as const).map((t) => (
+            <button
+              key={t}
+              className={`pill${subTab === t ? ' on' : ''}`}
+              onClick={() => setSubTab(t)}
+            >
+              {t === 'modes' ? 'Modes' : 'Scales'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {subTab === 'modes' && <ModesContent instrument={instrument} />}
+      {subTab === 'scales' && <ScalesContent instrument={instrument} />}
+    </>
+  );
+}
+
+function ModesContent({ instrument }: { instrument: InstrumentId }) {
+  const keyRoot = 60; // C4
+
+  const playScale = (scaleIntervals: number[]) => {
+    scaleIntervals.forEach((iv, i) => {
+      let n = keyRoot + iv;
+      while (n > 79) n -= 12;
+      while (n < 57) n += 12;
+      pm(instrument, n, i * 0.25);
+    });
+    pm(instrument, keyRoot + 12 > 79 ? keyRoot : keyRoot + 12, scaleIntervals.length * 0.25);
+  };
+
+  const playChordPair = (mode: typeof MODES[number]) => {
+    const voiceChordLocal = (root: number, intervals: number[]) => {
+      let rm = root;
+      while (rm + Math.max(...intervals) > 79) rm -= 12;
+      while (rm < 57) rm += 12;
+      return intervals.map((i: number) => rm + i);
+    };
+    const tonicNotes = voiceChordLocal(keyRoot + mode.tonic.rootOffset, mode.tonic.iv);
+    const diagNotes = voiceChordLocal(keyRoot + mode.diagnostic.rootOffset, mode.diagnostic.iv);
+    tonicNotes.forEach((n: number) => pm(instrument, n, 0));
+    diagNotes.forEach((n: number) => pm(instrument, n, 1.2));
+  };
+
+  return (
+    <>
+      <div style={{ fontSize: 12, color: '#888', marginBottom: 12, lineHeight: 1.5 }}>
+        Every mode has a <b style={{ color: '#ccc' }}>signature flavour</b>. Below: the scale, the
+        diagnostic chord pair that identifies it, and songs you already know in that mode.
+        Tap <b style={{ color: '#a78bfa' }}>▶ Scale</b> to hear the ascending scale, or <b style={{ color: '#a78bfa' }}>▶ Pair</b> to
+        hear the two-chord diagnostic.
+      </div>
+
+      {MODES.map((mode) => (
+        <div key={mode.id} className="rc" style={{ marginBottom: 8 }}>
+          <div style={{ padding: '10px 12px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{
+                display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+                background: mode.co, flexShrink: 0,
+              }} />
+              <span style={{ fontWeight: 700, color: '#d4d4d8', fontSize: 14 }}>{mode.n}</span>
+              <span style={{ fontSize: 11, color: '#666', marginLeft: 'auto' }}>
+                {mode.tonality} tonic
+              </span>
+            </div>
+
+            {/* Feel + signature */}
+            <div style={{ fontSize: 12, color: '#aaa', lineHeight: 1.5, marginBottom: 6 }}>
+              {mode.ex}
+            </div>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>
+              <b style={{ color: '#ccc' }}>Signature:</b> {mode.signature}
+            </div>
+
+            {/* Hint */}
+            <div style={{
+              fontSize: 11, color: '#a78bfa', lineHeight: 1.5,
+              padding: '6px 10px', background: 'rgba(99, 102, 241, 0.06)',
+              borderRadius: 8, marginBottom: 8,
+            }}>
+              💡 {mode.hint}
+            </div>
+
+            {/* Diagnostic pair label */}
+            <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>
+              Diagnostic pair: <b style={{ color: '#ccc' }}>{mode.tonic.rn} → {mode.diagnostic.rn}</b>
+            </div>
+
+            {/* Play buttons */}
+            <div className="ag" style={{ marginBottom: 8 }}>
+              <button className="ab" style={{ minWidth: 0, padding: '6px 12px' }} onClick={() => playScale(mode.scale)}>
+                <span style={{ fontSize: 11 }}>▶ Scale</span>
+              </button>
+              <button className="ab" style={{ minWidth: 0, padding: '6px 12px' }} onClick={() => playChordPair(mode)}>
+                <span style={{ fontSize: 11 }}>▶ Pair ({mode.tonic.rn} → {mode.diagnostic.rn})</span>
+              </button>
+            </div>
+
+            {/* Diatonic chords built from this mode's scale */}
+            <DiatonicChordsForMode scale={mode.scale} keyRoot={keyRoot} instrument={instrument} />
+
+            {/* Song refs */}
+            {mode.songs.length > 0 && (
+              <div style={{ fontSize: 11, color: '#666', lineHeight: 1.6 }}>
+                {mode.songs.map((s, i) => (
+                  <div key={i} style={{ marginBottom: 2 }}>
+                    <span style={{ color: '#aaa' }}>{s.title}</span>
+                    {s.hint && <span style={{ color: '#555' }}> — {s.hint}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function ScalesContent({ instrument }: { instrument: InstrumentId }) {
+  const keyRoot = 60; // C4
+  const NOTE_DUR = 0.22;
+
+  const playScale = (intervals: number[]) => {
+    const top = Math.max(...intervals);
+    const root = keyRoot + top > 79 ? keyRoot - 12 : keyRoot;
+    const asc = intervals.map((iv) => root + iv);
+    const oct = root + 12 <= 79 ? [root + 12] : [];
+    const desc = [...intervals].reverse().map((iv) => root + iv);
+    [...asc, ...oct, ...desc].forEach((n, i) => pm(instrument, n, i * NOTE_DUR));
+  };
+
+  return (
+    <>
+      <div style={{ fontSize: 12, color: '#888', marginBottom: 12, lineHeight: 1.5 }}>
+        Every scale has a <b style={{ color: '#ccc' }}>signature step</b> that makes it recognisable. Tap <b style={{ color: '#a78bfa' }}>▶ Scale</b> to hear ascending + descending from C4.
+      </div>
+
+      {SCALES.map((scale) => (
+        <div key={scale.id} className="rc" style={{ marginBottom: 8 }}>
+          <div style={{ padding: '10px 12px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <span style={{
+                display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+                background: scale.co, flexShrink: 0,
+              }} />
+              <span style={{ fontWeight: 700, color: '#d4d4d8', fontSize: 14 }}>{scale.n}</span>
+              <span style={{ fontSize: 10, color: '#666', marginLeft: 'auto', fontFamily: 'monospace' }}>
+                {scale.intervals.join(' · ')}
+              </span>
+            </div>
+
+            {/* Feel */}
+            <div style={{ fontSize: 12, color: '#aaa', lineHeight: 1.5, marginBottom: 6 }}>
+              {scale.ex}
+            </div>
+
+            {/* Signature */}
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>
+              <b style={{ color: '#ccc' }}>Signature:</b> {scale.signature}
+            </div>
+
+            {/* Hint */}
+            <div style={{
+              fontSize: 11, color: '#a78bfa', lineHeight: 1.5,
+              padding: '6px 10px', background: 'rgba(99, 102, 241, 0.06)',
+              borderRadius: 8, marginBottom: 8,
+            }}>
+              💡 {scale.hint}
+            </div>
+
+            {/* Play */}
+            <div className="ag" style={{ marginBottom: 8 }}>
+              <button className="ab" style={{ minWidth: 0, padding: '6px 12px' }} onClick={() => playScale(scale.intervals)}>
+                <span style={{ fontSize: 11 }}>▶ Scale</span>
+              </button>
+            </div>
+
+            {/* Songs */}
+            {scale.songs.length > 0 && (
+              <div style={{ fontSize: 11, color: '#666', lineHeight: 1.6 }}>
+                {scale.songs.map((s, i) => (
+                  <div key={i} style={{ marginBottom: 2 }}>
+                    <span style={{ color: '#aaa' }}>{s.title}</span>
+                    {s.hint && <span style={{ color: '#555' }}> — {s.hint}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Build the 7 diatonic triads from a mode's scale intervals.
+ * For each scale degree, stack two thirds (every other scale note)
+ * and classify the resulting triad as maj/min/dim/aug.
+ */
+function DiatonicChordsForMode({
+  scale,
+  keyRoot,
+  instrument,
+}: { scale: number[]; keyRoot: number; instrument: InstrumentId }) {
+  const romanNums = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii'];
+
+  const chords = scale.map((rootIv, idx) => {
+    // Stack thirds: root, 3rd (2 scale steps up), 5th (4 scale steps up)
+    const thirdIdx = (idx + 2) % 7;
+    const fifthIdx = (idx + 4) % 7;
+    let thirdIv = scale[thirdIdx] - rootIv;
+    let fifthIv = scale[fifthIdx] - rootIv;
+    if (thirdIv < 0) thirdIv += 12;
+    if (fifthIv < 0) fifthIv += 12;
+
+    // Classify
+    let quality: string;
+    let qualityShort: string;
+    let co: string;
+    if (thirdIv === 4 && fifthIv === 7) { quality = 'Major'; qualityShort = 'Maj'; co = '#22c55e'; }
+    else if (thirdIv === 3 && fifthIv === 7) { quality = 'Minor'; qualityShort = 'min'; co = '#3b82f6'; }
+    else if (thirdIv === 3 && fifthIv === 6) { quality = 'Dim'; qualityShort = '°'; co = '#ef4444'; }
+    else if (thirdIv === 4 && fifthIv === 8) { quality = 'Aug'; qualityShort = '+'; co = '#f97316'; }
+    else { quality = `(${thirdIv},${fifthIv})`; qualityShort = '?'; co = '#888'; }
+
+    // Roman numeral formatting: uppercase for major/aug, lowercase for minor/dim
+    const isUpper = quality === 'Major' || quality === 'Aug';
+    const rn = isUpper
+      ? romanNums[idx].toUpperCase() + (quality === 'Aug' ? '+' : '')
+      : romanNums[idx] + (quality === 'Dim' ? '°' : '');
+
+    return { rootIv, thirdIv, fifthIv, quality, qualityShort, co, rn, degreeIdx: idx };
+  });
+
+  const playChord = (rootIv: number, thirdIv: number, fifthIv: number) => {
+    const notes = [0, thirdIv, fifthIv].map((iv) => {
+      let n = keyRoot + rootIv + iv;
+      while (n > 79) n -= 12;
+      while (n < 57) n += 12;
+      return n;
+    });
+    notes.forEach((n) => pm(instrument, n, 0));
+  };
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 10, color: '#666', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
+        Diatonic triads
+      </div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {chords.map((ch) => (
+          <button
+            key={ch.degreeIdx}
+            onClick={() => playChord(ch.rootIv, ch.thirdIv, ch.fifthIv)}
+            style={{
+              flex: '1 1 0', minWidth: 40, padding: '5px 2px',
+              background: '#111125', border: `1.5px solid ${ch.co}33`,
+              borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+              textAlign: 'center', transition: 'all .12s',
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: ch.co }}>{ch.rn}</div>
+            <div style={{ fontSize: 9, color: '#666' }}>{ch.quality}</div>
+          </button>
+        ))}
       </div>
     </div>
   );
