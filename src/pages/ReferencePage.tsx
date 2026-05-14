@@ -434,6 +434,7 @@ function DiatonicChordsForMode({
   );
 }
 
+
 function IntervalReferenceSheet({ instrument }: { instrument: InstrumentId }) {
   const sections = [
     { l: 'Seconds', iv: [1, 2] },
