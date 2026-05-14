@@ -146,18 +146,6 @@ export const SCALES: ScaleDef[] = [
       { title: '"Norwegian Wood" — Beatles', hint: 'The verse runs through E Mixolydian — natural D over an E tonic' },
     ],
   },
-  {
-    id: 'lydianDominant',
-    n: 'Lydian Dominant', sh: 'LydD', co: '#f59e0b',
-    intervals: [0, 2, 4, 6, 7, 9, 10],
-    ex: 'Mixolydian with a ♯4 — jazz fusion, "Simpsons" sound, the most colourful major-ish scale',
-    signature: 'Both ♯4 AND ♭7 — the maximum tritone tension in a major-ish scale',
-    hint: 'Has BOTH the Lydian ♯4 and the Mixolydian ♭7. Very jazz. The Simpsons theme implies this scale. Used over dominant 7 chords in jazz.',
-    songs: [
-      { title: 'The Simpsons theme — Danny Elfman', hint: 'The playful jump at the start implies the Lydian Dominant colour' },
-      { title: '"The Flintstones" theme', hint: 'The cartoon jump at "Flintstones!" implies Lydian Dominant' },
-    ],
-  },
 
   // ─── All modes ────────────────────────────────────────────────────────────
   // Ionian = major, Aeolian = naturalMinor (already above)
@@ -175,18 +163,6 @@ export const SCALES: ScaleDef[] = [
   },
 
   // ─── Exotic ───────────────────────────────────────────────────────────────
-  {
-    id: 'phrygianDominant',
-    n: 'Phrygian Dominant', sh: 'PhrD', co: '#b91c1c',
-    intervals: [0, 1, 4, 5, 7, 8, 10],
-    ex: 'Harmonic minor starting on the 5th — flamenco, Middle Eastern, snake-charmer',
-    signature: 'Like Phrygian but with a MAJOR 3rd — ♭2 + M3 is the defining clash',
-    hint: 'The ♭2 and M3 together create that intense Spanish/Middle-Eastern sound. The major 3rd makes it "brighter" than Phrygian while the ♭2 keeps it dark.',
-    songs: [
-      { title: '"Miserlou" — Dick Dale / Pulp Fiction', hint: 'The opening motif descends through Phrygian Dominant — pure snake-charmer' },
-      { title: '"Hava Nagila" — the chromatic descending version', hint: 'The end of the melody implies Phrygian Dominant on the V' },
-    ],
-  },
   {
     id: 'wholeTone',
     n: 'Whole Tone', sh: 'WT', co: '#0ea5e9',
@@ -234,7 +210,7 @@ export const SCALE_LEVELS: ScaleLevel[] = [
   },
   {
     n: 'Major flavours',
-    scales: ['major', 'lydian', 'mixolydian', 'lydianDominant'],
+    scales: ['major', 'lydian', 'mixolydian'],
   },
   {
     n: 'All modes',
@@ -242,7 +218,7 @@ export const SCALE_LEVELS: ScaleLevel[] = [
   },
   {
     n: 'Exotic',
-    scales: ['harmonicMinor', 'phrygianDominant', 'lydianDominant', 'wholeTone', 'chromatic'],
+    scales: ['harmonicMinor', 'wholeTone', 'chromatic'],
   },
 ];
 
@@ -251,12 +227,9 @@ export const SCALE_LEVELS: ScaleLevel[] = [
 export const SCALE_CLOSE_PAIRS = new Set([
   'major_lydian', 'lydian_major',
   'major_mixolydian', 'mixolydian_major',
-  'lydian_lydianDominant', 'lydianDominant_lydian',
-  'mixolydian_lydianDominant', 'lydianDominant_mixolydian',
   'naturalMinor_dorian', 'dorian_naturalMinor',
   'naturalMinor_phrygian', 'phrygian_naturalMinor',
   'naturalMinor_harmonicMinor', 'harmonicMinor_naturalMinor',
-  'phrygian_phrygianDominant', 'phrygianDominant_phrygian',
   'phrygian_locrian', 'locrian_phrygian',
   'pentatonicMajor_major', 'major_pentatonicMajor',
   'pentatonicMinor_naturalMinor', 'naturalMinor_pentatonicMinor',
@@ -267,16 +240,12 @@ export const SCALE_HINTS: Record<string, string> = {
   'lydian_major':              'Close! Both are major. Major has a natural 4 — the 4th note is where you expect it.',
   'major_mixolydian':         'Close! Both are major. Mixolydian has a ♭7 — the 7th note drops a half-step.',
   'mixolydian_major':         'Close! Both are major. Major has a natural 7 — the 7th note pulls back up to the octave.',
-  'lydian_lydianDominant':    'Close! Both have ♯4. Lydian Dominant also has a ♭7 — listen for that drop at the end.',
-  'mixolydian_lydianDominant':'Close! Both have ♭7. Lydian Dominant also has a ♯4 — listen for that raised 4th.',
   'naturalMinor_dorian':      'Close! Both are minor. Dorian has a natural 6 — one note brighter. Listen for the 6th step.',
   'dorian_naturalMinor':      'Close! Both are minor. Natural minor has a ♭6 — one note darker. Listen for the 6th step.',
   'naturalMinor_phrygian':    'Close! Both are minor. Phrygian starts with a half-step — the very first move is tighter.',
   'phrygian_naturalMinor':    'Close! Both are minor. Natural minor starts with a whole step — more space in the first move.',
   'naturalMinor_harmonicMinor':'Close! Both are minor. Harmonic minor raises the 7th — you hear a larger leap near the top.',
   'harmonicMinor_naturalMinor':'Close! Both are minor. Natural minor has a ♭7 — the top of the scale is flatter.',
-  'phrygian_phrygianDominant':'Close! Both have ♭2. Phrygian Dominant has a major 3rd — brighter in the middle.',
-  'phrygianDominant_phrygian':'Close! Both have ♭2. Phrygian has a minor 3rd — darker in the middle.',
   'phrygian_locrian':          'Close! Both have ♭2. Locrian also has a ♭5 — the 5th step is lower too.',
   'locrian_phrygian':          'Close! Both have ♭2. Phrygian has a natural 5 — the 5th step is a perfect 5th.',
   'pentatonicMajor_major':    'Close! Major pentatonic is a subset of major — only 5 notes, the 4th and 7th are missing.',

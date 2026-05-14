@@ -21,6 +21,7 @@ import {
   type ProgressionPayload,
 } from '../exercises/progression';
 import { MODE_MAP } from '../data/modes';
+import { SCALE_MAP } from '../data/scales';
 import { PROGRESSION_CHORD_MAP } from '../data/progressions';
 
 interface TrainPageProps {
@@ -226,6 +227,24 @@ export function TrainPage(props: TrainPageProps) {
           // Diagnostic chord notes in a lighter colour
           const diagRoot = modePayload.keyRoot + mode.diagnostic.rootOffset;
           mode.diagnostic.iv.forEach((iv) => { highlights[diagRoot + iv] = '#a78bfa'; });
+        }
+      }
+    } else if (activeExercise.id === 'scaleId') {
+      // ── Scale: show only root pre-answer; ascending notes post-answer.
+      // Descending notes excluded — showing both up and down was the mess.
+      highlights[question.root] = '#6366f1';
+      if (quizPhase === 'answered' && feedbackInfo) {
+        const scalePayload = question.payload as { scaleId: string; keyRoot: number };
+        const scale = SCALE_MAP[scalePayload.scaleId];
+        if (scale) {
+          const accent = scale.co;
+          const softer = accent + '99'; // 60% opacity via hex alpha
+          scale.intervals.forEach((iv) => {
+            const n = scalePayload.keyRoot + iv;
+            highlights[n] = iv === 0 ? accent : softer;
+          });
+          const octave = scalePayload.keyRoot + 12;
+          if (octave <= 79) highlights[octave] = accent;
         }
       }
     } else {
