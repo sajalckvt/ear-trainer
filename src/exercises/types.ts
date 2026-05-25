@@ -65,6 +65,8 @@ export interface Exercise<TPayload = unknown> {
     distanceDirection?: 'asc' | 'desc' | 'both';
     /** Number of chords in the modal harmony exercise (default 2). */
     modeChordCount?: number;
+    /** Fixed progression length override (1-7). undefined = use level default random range. */
+    progressionLength?: number;
   }): Question & { payload: TPayload; pickId: string | number };
 
   play(

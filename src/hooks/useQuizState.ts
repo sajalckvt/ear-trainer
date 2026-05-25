@@ -40,6 +40,7 @@ export interface UseQuizStateOptions {
   arpeggio: boolean;
   modeChordCount: number;
   instrument: InstrumentId;
+  progressionLength?: number;
 }
 
 export function useQuizState(opts: UseQuizStateOptions) {
@@ -77,6 +78,7 @@ export function useQuizState(opts: UseQuizStateOptions) {
       spread: opts.spread,
       distanceDirection: opts.distanceDirection,
       modeChordCount: opts.modeChordCount,
+      progressionLength: opts.progressionLength,
     });
     historyRef.current.push(q.pickId);
     if (historyRef.current.length > 10) historyRef.current.shift();
@@ -86,7 +88,7 @@ export function useQuizState(opts: UseQuizStateOptions) {
     playCadence(60 + keyOffset, opts.instrument, opts.cadenceEnabled, () => {
       opts.exercise.play(q, opts.instrument, { arpeggio: opts.arpeggio });
     });
-  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.distanceDirection, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.modeChordCount, opts.instrument]);
+  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.distanceDirection, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.modeChordCount, opts.progressionLength, opts.instrument]);
 
   const replay = useCallback(() => {
     if (!session.question) return;

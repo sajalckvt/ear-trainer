@@ -118,7 +118,39 @@ export function DistanceDirectionToggle({
   );
 }
 
-// ─── Mode chord count toggle ─────────────────────────────────────────────
+// ─── Progression length toggle ────────────────────────────────────────────
+export function ProgressionLengthToggle({
+  value,
+  onChange,
+}: {
+  value: number | undefined;
+  onChange: (v: number | undefined) => void;
+}) {
+  return (
+    <div className="trow">
+      <span>Chord count</span>
+      <div className="pg">
+        <button
+          className={`pill${value === undefined ? ' on' : ''}`}
+          onClick={() => onChange(undefined)}
+        >
+          Random
+        </button>
+        {[2, 3, 4, 5, 6, 7].map((n) => (
+          <button
+            key={n}
+            className={`pill${value === n ? ' on' : ''}`}
+            onClick={() => onChange(n)}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
 export function ModeChordCountToggle({
   value,
   onChange,

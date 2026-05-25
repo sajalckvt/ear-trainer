@@ -164,26 +164,85 @@ export function ProgressionAnswerBuilder({
         </div>
       )}
 
-      {/* Chord answer grid — reused style, but our own click handler */}
-      <div className="ag">
-        {answers.map((a) => {
-          // Once locked, dim everything — the slot bar shows the result.
-          const cls = locked ? 'ab dm' : 'ab';
-          return (
-            <button
-              key={String(a.id)}
-              className={cls}
-              style={{ '--ac': a.color } as React.CSSProperties}
-              disabled={locked}
-              onClick={() => handleChordPick(a.id)}
-            >
+      {/* Chord answer grid — grouped by function family */}
+      {!locked && <GroupedChordGrid answers={answers} onPick={handleChordPick} />}
+      {locked && (
+        <div className="ag" style={{ opacity: 0.3 }}>
+          {answers.map((a) => (
+            <button key={String(a.id)} className="ab dm" style={{ '--ac': a.color } as React.CSSProperties} disabled>
               <span className="sh">{a.short}</span>
-              {a.label}
-              {a.hint && <span className="st-count">{a.hint}</span>}
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+// ─── Grouped answer grid ──────────────────────────────────────────────────────
+// Groups chords by function family (tonic / subdominant / dominant / nondiatonic)
+// so the user isn't staring at 14+ flat buttons.
+
+const FAMILY_META: Record<string, { label: string; color: string }> = {
+  tonic:       { label: 'Tonic',       color: '#22c55e' },
+  subdominant: { label: 'Subdominant', color: '#3b82f6' },
+  dominant:    { label: 'Dominant',    color: '#f43f5e' },
+  nondiatonic: { label: 'Non-diatonic',color: '#f97316' },
+};
+
+const FAMILY_ORDER = ['tonic', 'subdominant', 'dominant', 'nondiatonic'];
+
+function GroupedChordGrid({
+  answers,
+  onPick,
+}: {
+  answers: AnswerOption[];
+  onPick: (id: string | number) => void;
+}) {
+  const groups: Record<string, AnswerOption[]> = {};
+  for (const a of answers) {
+    const fn = (a.hint as string) ?? 'tonic';
+    if (!groups[fn]) groups[fn] = [];
+    groups[fn].push(a);
+  }
+
+  const families = FAMILY_ORDER.filter((f) => groups[f]?.length);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '4px 0' }}>
+      {families.map((fn) => {
+        const meta = FAMILY_META[fn] ?? { label: fn, color: '#888' };
+        return (
+          <div key={fn}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, color: meta.color,
+              textTransform: 'uppercase', letterSpacing: 1.2,
+              marginBottom: 4, opacity: 0.7,
+            }}>
+              {meta.label}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {groups[fn].map((a) => (
+                <button
+                  key={String(a.id)}
+                  className="ab"
+                  style={{
+                    '--ac': a.color,
+                    flex: '0 0 auto',
+                    minWidth: 52,
+                    padding: '7px 10px',
+                  } as React.CSSProperties}
+                  onClick={() => onPick(a.id)}
+                >
+                  <span className="sh">{a.short}</span>
+                  {a.label !== a.short ? a.label : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
 }

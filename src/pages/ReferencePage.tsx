@@ -153,11 +153,14 @@ import { SCALES } from '../data/scales';
 
 function ModesSection({ instrument }: { instrument: InstrumentId }) {
   const [subTab, setSubTab] = useState<'modes' | 'scales'>('modes');
+  const [refKeyName, setRefKeyName] = useState<string>('C');
+  // MIDI root for the reference key, always in octave 4 range
+  const refKeyRoot = 60 + (['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'].indexOf(refKeyName));
 
   return (
     <>
       {/* Sub-toggle: Modes | Scales */}
-      <div className="ctrl-row" style={{ marginBottom: 14 }}>
+      <div className="ctrl-row" style={{ marginBottom: 10 }}>
         <div className="pg">
           {(['modes', 'scales'] as const).map((t) => (
             <button
@@ -171,14 +174,31 @@ function ModesSection({ instrument }: { instrument: InstrumentId }) {
         </div>
       </div>
 
-      {subTab === 'modes' && <ModesContent instrument={instrument} />}
-      {subTab === 'scales' && <ScalesContent instrument={instrument} />}
+      {/* Key selector — shown for both tabs */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+          Reference key
+        </div>
+        <div className="key-row">
+          {(['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'] as const).map((k) => (
+            <button
+              key={k}
+              className={`kb${refKeyName === k ? ' on' : ''}`}
+              onClick={() => setRefKeyName(k)}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {subTab === 'modes' && <ModesContent instrument={instrument} keyRoot={refKeyRoot} />}
+      {subTab === 'scales' && <ScalesContent instrument={instrument} keyRoot={refKeyRoot} />}
     </>
   );
 }
 
-function ModesContent({ instrument }: { instrument: InstrumentId }) {
-  const keyRoot = 60; // C4
+function ModesContent({ instrument, keyRoot }: { instrument: InstrumentId; keyRoot: number }) {
 
   const playScale = (scaleIntervals: number[]) => {
     scaleIntervals.forEach((iv, i) => {
@@ -259,6 +279,9 @@ function ModesContent({ instrument }: { instrument: InstrumentId }) {
               </button>
             </div>
 
+            {/* Scale roll — scrollable degree strip */}
+            <ChordOctaveRoll scale={mode.scale} keyRoot={keyRoot} color={mode.co} instrument={instrument} />
+
             {/* Diatonic chords built from this mode's scale */}
             <DiatonicChordsForMode scale={mode.scale} keyRoot={keyRoot} instrument={instrument} />
 
@@ -280,8 +303,7 @@ function ModesContent({ instrument }: { instrument: InstrumentId }) {
   );
 }
 
-function ScalesContent({ instrument }: { instrument: InstrumentId }) {
-  const keyRoot = 60; // C4
+function ScalesContent({ instrument, keyRoot }: { instrument: InstrumentId; keyRoot: number }) {
   const NOTE_DUR = 0.22;
 
   const playScale = (intervals: number[]) => {
@@ -333,6 +355,9 @@ function ScalesContent({ instrument }: { instrument: InstrumentId }) {
               💡 {scale.hint}
             </div>
 
+            {/* Scale roll */}
+            <ChordOctaveRoll scale={scale.intervals} keyRoot={keyRoot} color={scale.co} instrument={instrument} />
+
             {/* Play */}
             <div className="ag" style={{ marginBottom: 8 }}>
               <button className="ab" style={{ minWidth: 0, padding: '6px 12px' }} onClick={() => playScale(scale.intervals)}>
@@ -357,6 +382,119 @@ function ScalesContent({ instrument }: { instrument: InstrumentId }) {
     </>
   );
 }
+
+/**
+ * ChordOctaveRoll — horizontally scrollable strip of diatonic chords,
+ * spanning three octave registers: lower (↓), middle (default), upper (↑).
+ * Each cell is a diatonic triad built from the mode's scale. Tapping plays
+ * the chord in that register. The middle octave is the default view.
+ */
+function ChordOctaveRoll({
+  scale,
+  keyRoot,
+  color: _color,
+  instrument,
+}: {
+  scale: number[];
+  keyRoot: number;
+  color: string;
+  instrument: InstrumentId;
+}) {
+  const romanNums = ['I','II','III','IV','V','VI','VII'];
+
+  // Build chord data for each scale degree
+  type ChordCell = {
+    degIdx: number; rn: string; quality: string; co: string;
+    rootIv: number; thirdIv: number; fifthIv: number;
+  };
+
+  const chords: ChordCell[] = scale.map((rootIv, idx) => {
+    const thirdIdx = (idx + 2) % 7;
+    const fifthIdx = (idx + 4) % 7;
+    let thirdIv = scale[thirdIdx] - rootIv;
+    let fifthIv = scale[fifthIdx] - rootIv;
+    if (thirdIv < 0) thirdIv += 12;
+    if (fifthIv < 0) fifthIv += 12;
+
+    let quality: string; let co: string;
+    if (thirdIv === 4 && fifthIv === 7)       { quality = 'maj'; co = '#22c55e'; }
+    else if (thirdIv === 3 && fifthIv === 7)  { quality = 'min'; co = '#3b82f6'; }
+    else if (thirdIv === 3 && fifthIv === 6)  { quality = 'dim'; co = '#ef4444'; }
+    else if (thirdIv === 4 && fifthIv === 8)  { quality = 'aug'; co = '#f97316'; }
+    else                                       { quality = '?';   co = '#888';   }
+
+    const isUpper = quality === 'maj' || quality === 'aug';
+    const base = isUpper ? romanNums[idx].toUpperCase() : romanNums[idx].toLowerCase();
+    const rn = base + (quality === 'dim' ? '°' : quality === 'aug' ? '+' : '');
+
+    return { degIdx: idx, rn, quality, co, rootIv, thirdIv, fifthIv };
+  });
+
+  const playChord = (rootIv: number, thirdIv: number, fifthIv: number, octShift: number) => {
+    const base = keyRoot + rootIv + octShift * 12;
+    [0, thirdIv, fifthIv].forEach((iv) => {
+      let n = base + iv;
+      // clamp to soundfont range
+      while (n > 81) n -= 12;
+      while (n < 45) n += 12;
+      pm(instrument, n, 0);
+    });
+  };
+
+  const octaves = [
+    { shift: -1, label: '↓ lower', dim: true },
+    { shift: 0,  label: 'middle',  dim: false },
+    { shift: 1,  label: '↑ upper', dim: true },
+  ];
+
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 }}>
+        Chord roll · tap to hear · scroll for octaves
+      </div>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+        <div style={{ display: 'flex', gap: 2, width: 'max-content', padding: '2px 0', alignItems: 'stretch' }}>
+          {octaves.map((oct, oi) => (
+            <div key={oi} style={{ display: 'flex', gap: 2 }}>
+              {/* Octave divider label */}
+              {oi > 0 && (
+                <div style={{
+                  width: 1, background: '#2a2a3a', margin: '0 3px', alignSelf: 'stretch',
+                }} />
+              )}
+              {chords.map((ch) => {
+                const cellColor = ch.co;
+                return (
+                  <button
+                    key={`${oi}-${ch.degIdx}`}
+                    onClick={() => playChord(ch.rootIv, ch.thirdIv, ch.fifthIv, oct.shift)}
+                    style={{
+                      width: 38, padding: '7px 2px',
+                      background: oct.dim ? `${cellColor}10` : `${cellColor}1e`,
+                      border: `1.5px solid ${oct.dim ? cellColor + '30' : cellColor + '66'}`,
+                      borderRadius: 7, cursor: 'pointer', textAlign: 'center',
+                      flexShrink: 0, fontFamily: 'inherit', transition: 'background .1s',
+                    }}
+                  >
+                    <div style={{
+                      fontSize: 11, fontWeight: 700,
+                      color: oct.dim ? `${cellColor}55` : cellColor,
+                      marginBottom: 2,
+                    }}>{ch.rn}</div>
+                    <div style={{ fontSize: 9, color: oct.dim ? '#333' : '#555' }}>
+                      {oct.shift === -1 ? '↓' : oct.shift === 1 ? '↑' : '•'}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /**
  * Build the 7 diatonic triads from a mode's scale intervals.

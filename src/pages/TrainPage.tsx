@@ -4,7 +4,7 @@ import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
 import { pm, type InstrumentId } from '../audio/engine';
 import {
-  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, DistanceDirectionToggle, ModeChordCountToggle, InstrumentPicker,
+  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, DistanceDirectionToggle, ModeChordCountToggle, ProgressionLengthToggle, InstrumentPicker,
 } from '../components/Controls';
 import { ScoreBar } from '../components/ScoreBar';
 import { PlayArea } from '../components/PlayArea';
@@ -45,6 +45,8 @@ interface TrainPageProps {
   onDistanceDirectionChange: (v: 'asc' | 'desc' | 'both') => void;
   modeChordCount: number;
   onModeChordCountChange: (v: number) => void;
+  progressionLength: number | undefined;
+  onProgressionLengthChange: (v: number | undefined) => void;
   instrument: InstrumentId;
   onInstrumentChange: (id: InstrumentId) => void;
   question: (Question & { pickId: string | number }) | null;
@@ -62,6 +64,7 @@ interface TrainPageProps {
   onGuess: (id: string | number) => void;
   onResetScore: () => void;
   onResetTimer: () => void;
+  mistakeInsights: { pair: string; count: number; tip: string }[];
 }
 
 export function TrainPage(props: TrainPageProps) {
@@ -73,11 +76,13 @@ export function TrainPage(props: TrainPageProps) {
     arpeggio, onArpeggioChange,
     distanceDirection, onDistanceDirectionChange,
     modeChordCount, onModeChordCountChange,
+    progressionLength, onProgressionLengthChange,
     instrument, onInstrumentChange,
     question, feedback, quizPhase,
     correct, total, streak, best, nearMisses,
     timerLabel,
     onStart, onReplay, onNext, onGuess, onResetScore, onResetTimer,
+    mistakeInsights,
   } = props;
 
   const [sheetDismissed, setSheetDismissed] = useState(false);
@@ -327,6 +332,11 @@ export function TrainPage(props: TrainPageProps) {
 
   let pianoLabel = '';
   let pianoLabelColor = '#6366f1';
+  // For song progressions, expose the song title/artist after answering
+  const songMeta = (activeExercise.id === 'progression' && question)
+    ? (question.payload as ProgressionPayload).song
+    : null;
+
   if (activeExercise.id === 'progression' && question) {
     const payload = question.payload as ProgressionPayload;
     if (quizPhase === 'answered' && progChordIdx !== null) {
@@ -387,6 +397,8 @@ export function TrainPage(props: TrainPageProps) {
           badges.push(distanceDirection === 'asc' ? '↑ asc' : '↓ desc');
         if (activeExercise.id === 'modeHarmony' && modeChordCount !== 2)
           badges.push(`${modeChordCount} chords`);
+        if (activeExercise.id === 'progression' && progressionLength != null)
+          badges.push(`${progressionLength} chords`);
 
         return (
           <div className="settings-bar">
@@ -416,6 +428,9 @@ export function TrainPage(props: TrainPageProps) {
             <DistanceDirectionToggle value={distanceDirection} onChange={onDistanceDirectionChange} />
           )}
           {activeExercise.id === 'modeHarmony' && <ModeChordCountToggle value={modeChordCount} onChange={onModeChordCountChange} />}
+          {activeExercise.id === 'progression' && (
+            <ProgressionLengthToggle value={progressionLength} onChange={onProgressionLengthChange} />
+          )}
         </div>
       )}
 
@@ -426,6 +441,29 @@ export function TrainPage(props: TrainPageProps) {
         nearMisses={nearMisses} timerLabel={timerLabel}
         onResetScore={onResetScore} onResetTimer={onResetTimer}
       />
+
+      {/* Mistake pattern insights — only shown when we have enough data */}
+      {mistakeInsights.length > 0 && (
+        <div style={{
+          margin: '0 0 8px',
+          padding: '8px 12px',
+          background: 'rgba(239,68,68,0.06)',
+          border: '1px solid rgba(239,68,68,0.15)',
+          borderRadius: 9,
+          fontSize: 11,
+        }}>
+          <div style={{ color: '#f87171', fontWeight: 700, marginBottom: 5, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
+            📊 Pattern detected
+          </div>
+          {mistakeInsights.map((ins) => (
+            <div key={ins.pair} style={{ marginBottom: 4 }}>
+              <span style={{ color: '#f43f5e', fontWeight: 600 }}>{ins.pair}</span>
+              <span style={{ color: '#666' }}> · {ins.count}×  </span>
+              <span style={{ color: '#888' }}>{ins.tip}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {activeExercise.id === 'melody' ? (
         /* ── Melody board replaces standard Play/Grid flow ── */
@@ -458,17 +496,43 @@ export function TrainPage(props: TrainPageProps) {
           />
 
           {activeExercise.id === 'progression' && question ? (
-            <ProgressionAnswerBuilder
-              answers={answers}
-              slotCount={(question.payload as { chordIds: string[] }).chordIds.length}
-              guessedString={feedback?.guess !== undefined ? String(feedback.guess) : null}
-              correctString={quizPhase === 'answered' && correctId !== null ? String(correctId) : null}
-              locked={quizPhase === 'answered'}
-              activeChordIdx={progChordIdx}
-              onSubmit={onGuess}
-              onReviewSlot={handleSlotReview}
-              onPlayChord={handlePlayChord}
-            />
+            <>
+              <ProgressionAnswerBuilder
+                answers={answers}
+                slotCount={(question.payload as { chordIds: string[] }).chordIds.length}
+                guessedString={feedback?.guess !== undefined ? String(feedback.guess) : null}
+                correctString={quizPhase === 'answered' && correctId !== null ? String(correctId) : null}
+                locked={quizPhase === 'answered'}
+                activeChordIdx={progChordIdx}
+                onSubmit={onGuess}
+                onReviewSlot={handleSlotReview}
+                onPlayChord={handlePlayChord}
+              />
+              {quizPhase === 'answered' && songMeta && (
+                <div style={{
+                  margin: '8px 0',
+                  padding: '10px 14px',
+                  background: 'rgba(167,139,250,0.07)',
+                  border: '1px solid rgba(167,139,250,0.18)',
+                  borderRadius: 10,
+                  fontSize: 12,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#d4d4d8' }}>{songMeta.title}</span>
+                    <span style={{ color: '#666' }}>·</span>
+                    <span style={{ color: '#888' }}>{songMeta.artist}</span>
+                    {songMeta.hasNonDiatonic && (
+                      <span style={{
+                        marginLeft: 'auto', fontSize: 10, fontWeight: 700,
+                        color: '#f97316', background: 'rgba(249,115,22,0.12)',
+                        padding: '2px 6px', borderRadius: 4,
+                      }}>NON-DIATONIC</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#888', lineHeight: 1.5 }}>{songMeta.note}</div>
+                </div>
+              )}
+            </>
           ) : (
             <AnswerGrid
               answers={answers}

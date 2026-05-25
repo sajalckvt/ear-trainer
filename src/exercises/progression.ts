@@ -1,40 +1,26 @@
 /**
  * Progression exercise — identify each chord in a played sequence.
- *
- * Question: a 3-4 chord progression in some major key. The progression is
- * generated dynamically by picking chords from the level's vocabulary, with
- * mild musical biases (start on I more often, end on I or V).
- *
- * Answer: a comma-separated string of Roman-numeral ids that matches the
- * progression exactly. The user builds this string slot-by-slot in the
- * answer UI; once all slots are filled the full string is submitted.
- *
- * Why a single string? The existing Exercise.isCorrect interface takes one
- * guess value. We encode multi-slot answers as joined strings to fit the
- * interface without churning every exercise. The string format is
- * "id1,id2,id3,id4" — e.g. "I,IV,V,I".
  */
 
 import {
   PROGRESSION_CHORD_MAP,
   PROGRESSION_LEVELS,
+  SONG_PROGRESSIONS,
 } from '../data/progressions';
 import { SAMPLE_LO, SAMPLE_HI } from '../data/constants';
 import { pm, type InstrumentId } from '../audio/engine';
 import type { Exercise, AnswerOption } from './types';
 
 export interface ProgressionPayload {
-  /** Ordered list of chord ids that make up the progression. */
   chordIds: string[];
-  /** MIDI value of the key's tonic (root of I). */
   keyRoot: number;
+  /** Song metadata if this question came from SONG_PROGRESSIONS */
+  song?: { title: string; artist: string; note: string; hasNonDiatonic?: boolean };
 }
 
 // ─── Playback timing ────────────────────────────────────────────────────────
-// Exported so the UI can sync animations to the audio.
-export const CHORD_DUR = 1.2;   // seconds the chord rings
-export const CHORD_GAP = 0.15;  // pause before the next chord
-/** Total time between successive chord starts. */
+export const CHORD_DUR = 1.2;
+export const CHORD_GAP = 0.15;
 export const CHORD_STEP = CHORD_DUR + CHORD_GAP;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -44,15 +30,19 @@ function pick<T>(list: readonly T[]): T {
 }
 
 /**
- * Generate a progression. Picks length, then picks chords with these biases:
- *   - 60% chance the first chord is the I chord (anchors the key)
- *   - 60% chance the last chord is I or V (musical resolution)
- *   - No immediate repeats (don't pick I twice in a row)
- *
- * Returns a list of chord ids drawn from the level's vocabulary.
+ * Generate a random progression.
+ * If fixedLen is provided (1-7), uses exactly that many chords.
+ * Otherwise picks randomly between minLen and maxLen.
  */
-function generateChordSequence(allowed: string[], minLen: number, maxLen: number): string[] {
-  const len = minLen + Math.floor(Math.random() * (maxLen - minLen + 1));
+function generateChordSequence(
+  allowed: string[],
+  minLen: number,
+  maxLen: number,
+  fixedLen?: number,
+): string[] {
+  const len = fixedLen != null
+    ? Math.max(2, Math.min(7, fixedLen))
+    : minLen + Math.floor(Math.random() * (maxLen - minLen + 1));
   const seq: string[] = [];
 
   for (let i = 0; i < len; i++) {
@@ -60,7 +50,6 @@ function generateChordSequence(allowed: string[], minLen: number, maxLen: number
     if (i === 0 && allowed.includes('I') && Math.random() < 0.6) {
       chId = 'I';
     } else if (i === len - 1 && Math.random() < 0.6) {
-      // Pick I or V if available, otherwise fall through
       const enders = ['I', 'V'].filter((id) => allowed.includes(id) && id !== seq[i - 1]);
       chId = enders.length > 0 ? pick(enders) : pick(allowed.filter((id) => id !== seq[i - 1]));
     } else {
@@ -72,22 +61,17 @@ function generateChordSequence(allowed: string[], minLen: number, maxLen: number
   return seq;
 }
 
-/**
- * Voice a chord around middle C, range-clamped to SAMPLE_LO..SAMPLE_HI.
- * Drops the lowest octave if the chord runs too high.
- */
 function voiceChord(chordRoot: number, intervals: number[]): number[] {
+  // Find a root octave where the chord fits inside the sample range.
+  // For 9th chords (span up to 14 semitones), we allow the top note to
+  // exceed SAMPLE_HI by up to 2 semitones rather than collapsing everything.
   let rm = chordRoot;
   const top = Math.max(...intervals);
-  while (rm + top > SAMPLE_HI) rm -= 12;
+  while (rm + top > SAMPLE_HI + 2) rm -= 12;
   while (rm < SAMPLE_LO) rm += 12;
   return intervals.map((i) => rm + i);
 }
 
-/**
- * MIDI notes for a specific chord slot in a progression question.
- * Used to drive the piano/fretboard highlights as the progression plays.
- */
 export function progressionChordNotes(
   q: { payload: ProgressionPayload },
   idx: number,
@@ -99,10 +83,6 @@ export function progressionChordNotes(
   return voiceChord(keyRoot + ch.rootOffset, ch.iv);
 }
 
-/**
- * Play just one chord from the progression — used for the post-answer
- * step-through where the user taps slots to re-hear individual chords.
- */
 export function playProgressionChord(
   q: { payload: ProgressionPayload },
   idx: number,
@@ -120,18 +100,54 @@ export const progressionExercise: Exercise<ProgressionPayload> = {
   levels: PROGRESSION_LEVELS,
   usesDirection: false,
 
-  generate({ levelIndex, keyOffset }) {
+  generate({ levelIndex, keyOffset, progressionLength }) {
     const lv = PROGRESSION_LEVELS[levelIndex];
-    const seq = generateChordSequence(lv.ch, lv.minLen, lv.maxLen);
 
-    // Key tonic — middle C plus the key offset, clamped to a reasonable range
     let keyRoot = 60 + keyOffset;
-    // Make sure even the highest chord (e.g. vii°) fits — vii° is rootOffset 11 + iv[2]=6 = 17 above key root
     while (keyRoot + 17 + 4 > SAMPLE_HI) keyRoot -= 12;
     while (keyRoot < SAMPLE_LO) keyRoot += 12;
 
-    // Concatenate all notes (in playback order) into the question's notes array,
-    // so the highlight system has something to render on the piano.
+    // ── Song progression mode ──────────────────────────────────────────
+    if (lv.isSong) {
+      const pool = SONG_PROGRESSIONS;
+      const song = pick(pool);
+      const seq = song.chords;
+
+      const allNotes: number[] = [];
+      for (const chId of seq) {
+        const ch = PROGRESSION_CHORD_MAP[chId];
+        if (!ch) continue;
+        const notes = voiceChord(keyRoot + ch.rootOffset, ch.iv);
+        allNotes.push(...notes);
+      }
+
+      return {
+        root: keyRoot,
+        notes: allNotes,
+        payload: {
+          chordIds: seq,
+          keyRoot,
+          song: {
+            title: song.title,
+            artist: song.artist,
+            note: song.note,
+            hasNonDiatonic: song.hasNonDiatonic,
+          },
+        },
+        pickId: `${song.title}-${keyOffset}`,
+        displayLabel: `${seq.length} chords · identify each`,
+      };
+    }
+
+    // ── Random progression mode ───────────────────────────────────────
+    const allowed = lv.ch ?? ['I', 'IV', 'V'];
+    const seq = generateChordSequence(
+      allowed,
+      lv.minLen,
+      lv.maxLen,
+      progressionLength,  // undefined = random
+    );
+
     const allNotes: number[] = [];
     for (const chId of seq) {
       const ch = PROGRESSION_CHORD_MAP[chId];
@@ -143,14 +159,13 @@ export const progressionExercise: Exercise<ProgressionPayload> = {
       root: keyRoot,
       notes: allNotes,
       payload: { chordIds: seq, keyRoot },
-      pickId: seq.join(','),  // dedupes recent picks at the sequence level
+      pickId: seq.join(','),
       displayLabel: `${seq.length}-chord progression`,
     };
   },
 
   play(q, instId: InstrumentId) {
     const { chordIds, keyRoot } = q.payload;
-
     chordIds.forEach((chId, idx) => {
       const ch = PROGRESSION_CHORD_MAP[chId];
       const notes = voiceChord(keyRoot + ch.rootOffset, ch.iv);
@@ -159,17 +174,34 @@ export const progressionExercise: Exercise<ProgressionPayload> = {
     });
   },
 
-  // Per-slot chord choices — the same answer set for every slot. The slot
-  // UI in TrainPage uses this list directly.
   answers(levelIndex): AnswerOption[] {
-    return PROGRESSION_LEVELS[levelIndex].ch.map((chId) => {
+    const lv = PROGRESSION_LEVELS[levelIndex];
+
+    // For song/non-diatonic levels, return all relevant chords
+    if (lv.isSong) {
+      // Pool: all chords that appear in any song
+      const usedIds = new Set(SONG_PROGRESSIONS.flatMap((s) => s.chords));
+      return [...usedIds].map((chId) => {
+        const ch = PROGRESSION_CHORD_MAP[chId];
+        return {
+          id: ch.id,
+          label: ch.n,
+          short: ch.sh,
+          color: ch.co,
+          hint: ch.fn,
+        };
+      });
+    }
+
+    const ids = lv.ch ?? ['I', 'IV', 'V'];
+    return ids.map((chId) => {
       const ch = PROGRESSION_CHORD_MAP[chId];
       return {
         id: ch.id,
         label: ch.n,
         short: ch.sh,
         color: ch.co,
-        hint: ch.fn,  // "tonic" / "subdominant" / "dominant"
+        hint: ch.fn,
       };
     });
   },
@@ -179,16 +211,11 @@ export const progressionExercise: Exercise<ProgressionPayload> = {
   },
 
   feedback(answerId) {
-    // answerId here will be the full comma-joined string of the *correct*
-    // answer (TrainPage passes it through after submission). We render a
-    // multi-line "the progression was: I → IV → V → I" feedback.
     const ids = String(answerId).split(',');
     const labels = ids.map((id) => PROGRESSION_CHORD_MAP[id]?.n ?? id);
     return {
       label: labels.join(' → '),
       color: '#a78bfa',
-      // No demoPlay — the user already heard it; if they want to re-hear,
-      // they have the Hear Again button.
     };
   },
 };
