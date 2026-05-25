@@ -402,7 +402,6 @@ function ChordOctaveRoll({
 }) {
   const romanNums = ['I','II','III','IV','V','VI','VII'];
 
-  // Build chord data for each scale degree
   type ChordCell = {
     degIdx: number; rn: string; quality: string; co: string;
     rootIv: number; thirdIv: number; fifthIv: number;
@@ -417,16 +416,15 @@ function ChordOctaveRoll({
     if (fifthIv < 0) fifthIv += 12;
 
     let quality: string; let co: string;
-    if (thirdIv === 4 && fifthIv === 7)       { quality = 'maj'; co = '#22c55e'; }
-    else if (thirdIv === 3 && fifthIv === 7)  { quality = 'min'; co = '#3b82f6'; }
-    else if (thirdIv === 3 && fifthIv === 6)  { quality = 'dim'; co = '#ef4444'; }
-    else if (thirdIv === 4 && fifthIv === 8)  { quality = 'aug'; co = '#f97316'; }
-    else                                       { quality = '?';   co = '#888';   }
+    if (thirdIv === 4 && fifthIv === 7)      { quality = 'maj'; co = '#22c55e'; }
+    else if (thirdIv === 3 && fifthIv === 7) { quality = 'min'; co = '#3b82f6'; }
+    else if (thirdIv === 3 && fifthIv === 6) { quality = 'dim'; co = '#ef4444'; }
+    else if (thirdIv === 4 && fifthIv === 8) { quality = 'aug'; co = '#f97316'; }
+    else                                      { quality = '?';   co = '#888';   }
 
     const isUpper = quality === 'maj' || quality === 'aug';
     const base = isUpper ? romanNums[idx].toUpperCase() : romanNums[idx].toLowerCase();
     const rn = base + (quality === 'dim' ? '°' : quality === 'aug' ? '+' : '');
-
     return { degIdx: idx, rn, quality, co, rootIv, thirdIv, fifthIv };
   });
 
@@ -434,59 +432,61 @@ function ChordOctaveRoll({
     const base = keyRoot + rootIv + octShift * 12;
     [0, thirdIv, fifthIv].forEach((iv) => {
       let n = base + iv;
-      // clamp to soundfont range
-      while (n > 81) n -= 12;
-      while (n < 45) n += 12;
+      while (n > 79) n -= 12;
+      while (n < 57) n += 12;
       pm(instrument, n, 0);
     });
   };
 
   const octaves = [
-    { shift: -1, label: '↓ lower', dim: true },
-    { shift: 0,  label: 'middle',  dim: false },
-    { shift: 1,  label: '↑ upper', dim: true },
+    { shift: -1, label: '↓ low',   opacity: 0.45 },
+    { shift: 0,  label: 'middle',  opacity: 1 },
+    { shift: 1,  label: '↑ high',  opacity: 0.45 },
   ];
 
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 }}>
-        Chord roll · tap to hear · scroll for octaves
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+        Diatonic chords · tap to hear · scroll ← → for octaves
       </div>
-      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
-        <div style={{ display: 'flex', gap: 2, width: 'max-content', padding: '2px 0', alignItems: 'stretch' }}>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ display: 'flex', gap: 0, width: 'max-content' }}>
           {octaves.map((oct, oi) => (
-            <div key={oi} style={{ display: 'flex', gap: 2 }}>
-              {/* Octave divider label */}
-              {oi > 0 && (
-                <div style={{
-                  width: 1, background: '#2a2a3a', margin: '0 3px', alignSelf: 'stretch',
-                }} />
-              )}
-              {chords.map((ch) => {
-                const cellColor = ch.co;
-                return (
+            <div key={oi} style={{ display: 'flex', flexDirection: 'column', opacity: oct.opacity }}>
+              {/* Octave label above the group */}
+              <div style={{
+                fontSize: 9, fontWeight: 600, color: '#444',
+                textTransform: 'uppercase', letterSpacing: 1,
+                textAlign: 'center', padding: '0 2px 4px',
+                borderBottom: oi === 1 ? '1px solid #2a2a3a' : '1px solid #1a1a28',
+                marginBottom: 5,
+                width: chords.length * 42 + (chords.length - 1) * 3,
+              }}>
+                {oct.label}
+              </div>
+              {/* Chord buttons */}
+              <div style={{ display: 'flex', gap: 3, paddingRight: oi < 2 ? 8 : 0 }}>
+                {chords.map((ch) => (
                   <button
                     key={`${oi}-${ch.degIdx}`}
                     onClick={() => playChord(ch.rootIv, ch.thirdIv, ch.fifthIv, oct.shift)}
                     style={{
-                      width: 38, padding: '7px 2px',
-                      background: oct.dim ? `${cellColor}10` : `${cellColor}1e`,
-                      border: `1.5px solid ${oct.dim ? cellColor + '30' : cellColor + '66'}`,
-                      borderRadius: 7, cursor: 'pointer', textAlign: 'center',
-                      flexShrink: 0, fontFamily: 'inherit', transition: 'background .1s',
+                      width: 42, padding: '8px 2px',
+                      background: oi === 1 ? `${ch.co}22` : `${ch.co}0e`,
+                      border: `1.5px solid ${oi === 1 ? ch.co + '55' : ch.co + '22'}`,
+                      borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                      flexShrink: 0, fontFamily: 'inherit',
                     }}
                   >
-                    <div style={{
-                      fontSize: 11, fontWeight: 700,
-                      color: oct.dim ? `${cellColor}55` : cellColor,
-                      marginBottom: 2,
-                    }}>{ch.rn}</div>
-                    <div style={{ fontSize: 9, color: oct.dim ? '#333' : '#555' }}>
-                      {oct.shift === -1 ? '↓' : oct.shift === 1 ? '↑' : '•'}
+                    <div style={{ fontSize: 12, fontWeight: 700, color: oi === 1 ? ch.co : ch.co + '88', marginBottom: 2 }}>
+                      {ch.rn}
+                    </div>
+                    <div style={{ fontSize: 9, color: oi === 1 ? '#666' : '#333' }}>
+                      {ch.quality}
                     </div>
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -496,11 +496,7 @@ function ChordOctaveRoll({
 }
 
 
-/**
- * Build the 7 diatonic triads from a mode's scale intervals.
- * For each scale degree, stack two thirds (every other scale note)
- * and classify the resulting triad as maj/min/dim/aug.
- */
+  // Build chord data for each scale degree
 function DiatonicChordsForMode({
   scale,
   keyRoot,
