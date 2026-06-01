@@ -193,7 +193,7 @@ export function Fretboard({ highlights, shape }: FretboardProps) {
                 borderRadius: 6, padding: '3px 8px', cursor: 'pointer',
               }}
             >
-              {shape.shapeName}-shape · next →
+              {shape.shapeName} · next →
             </button>
           </span>
         )}

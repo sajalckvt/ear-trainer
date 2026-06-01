@@ -12,7 +12,7 @@ import { AnswerGrid } from '../components/AnswerGrid';
 import { ProgressionAnswerBuilder } from '../components/ProgressionAnswerBuilder';
 import { Piano } from '../components/Piano';
 import { Fretboard } from '../components/Fretboard';
-import { resolveAllShapes } from '../data/caged';
+import { resolveGrips } from '../data/chordGrips';
 import { FeedbackSheet } from '../components/FeedbackSheet';
 import { MelodyBoard } from '../components/MelodyBoard';
 import {
@@ -392,8 +392,9 @@ export function TrainPage(props: TrainPageProps) {
     pianoLabel = question.displayLabel ?? `Root: ${m2d(question.root)}`;
   }
 
-  // ── CAGED guitar shape (chord exercises, on reveal) ──────────────────────
-  // Show a cycle-able CAGED chord grip for the revealed chord's root.
+  // ── Guitar chord grip (chord exercises, on reveal) ───────────────────────
+  // Show a cycle-able, quality-correct chord grip for the revealed chord.
+  // Falls back to played-note highlights when the quality has no grips.
   let cagedShape: {
     frets: number[]; rootPc: number; shapeName: string;
     onCycle: () => void; positionLabel: string;
@@ -405,17 +406,17 @@ export function TrainPage(props: TrainPageProps) {
     activeExercise.id === 'inversion';
 
   if (chordExercise && question && quizPhase === 'answered') {
-    // Root pitch class: from the question root (the chord's root midi).
     const rootPc = ((question.root % 12) + 12) % 12;
-    const all = resolveAllShapes(rootPc);
-    if (all.length > 0) {
-      const idx = ((cagedPos % all.length) + all.length) % all.length;
-      const cur = all[idx];
+    const chordId = (question.payload as { chordId?: string }).chordId;
+    const grips = chordId ? resolveGrips(chordId, rootPc) : [];
+    if (grips.length > 0) {
+      const idx = ((cagedPos % grips.length) + grips.length) % grips.length;
+      const cur = grips[idx];
       cagedShape = {
         frets: cur.frets,
         rootPc,
-        shapeName: cur.shape,
-        positionLabel: `pos ${idx + 1}/${all.length}`,
+        shapeName: cur.name,
+        positionLabel: `pos ${idx + 1}/${grips.length}`,
         onCycle: () => setCagedPos((p) => p + 1),
       };
     }
