@@ -73,207 +73,6 @@ export const PROGRESSION_CHORDS: ProgressionChord[] = [...TRIADS, ...SEVENTHS, .
 export const PROGRESSION_CHORD_MAP: Record<string, ProgressionChord> =
   Object.fromEntries(PROGRESSION_CHORDS.map((c) => [c.id, c]));
 
-// ─── Song progression ────────────────────────────────────────────────────────
-// A fixed sequence of chord ids, plus display metadata.
-
-export interface SongProgression {
-  title: string;
-  artist: string;
-  /** Brief note on what makes it interesting harmonically */
-  note: string;
-  /** Chord ids in order — must all exist in PROGRESSION_CHORD_MAP */
-  chords: string[];
-  /** true if it contains non-diatonic chords */
-  hasNonDiatonic?: boolean;
-  /** bpm hint — for display only */
-  tempo?: number;
-}
-
-// All transposed to a common "I = 0" roman-numeral language.
-// The exercise engine transposes to the user's key at runtime.
-// Sources cross-checked against theory transcriptions — keyboard-heavy / melodically
-// memorable progressions prioritised.
-
-export const SONG_PROGRESSIONS: SongProgression[] = [
-  // ── Piano classics — verified progressions ────────────────────────────
-  {
-    title: 'Imagine',
-    artist: 'John Lennon',
-    note: 'I–Imaj7–IV verse loop — the Cmaj7 passing chord is the signature',
-    chords: ['I', 'Imaj7', 'IV'],
-    tempo: 75,
-  },
-  {
-    title: 'Hey Jude',
-    artist: 'The Beatles',
-    note: 'I–V–V7–IV–I verse — that A7 (V7) before the G gives it the gospel pull',
-    chords: ['I', 'V', 'V7', 'IV', 'I'],
-    tempo: 74,
-  },
-  {
-    title: 'Let It Be',
-    artist: 'The Beatles',
-    note: 'I–V–vi–IV — one of the most used piano loops in pop history',
-    chords: ['I', 'V', 'vi', 'IV'],
-    tempo: 74,
-  },
-  {
-    title: 'Piano Man',
-    artist: 'Billy Joel',
-    note: 'I–V–IV–I — C G F C, the whole song is built on this open loop',
-    chords: ['I', 'V', 'IV', 'I'],
-    tempo: 92,
-  },
-  {
-    title: 'Bohemian Rhapsody (verse)',
-    artist: 'Queen',
-    note: 'I–vi–ii–V — the verse "Mama just killed a man" follows this jazz cycle',
-    chords: ['I', 'vi', 'ii', 'V'],
-    tempo: 72,
-  },
-  {
-    title: 'Clocks',
-    artist: 'Coldplay',
-    note: 'I–V–ii — Eb Bbm Fm, the three-chord piano arpeggio loop, hypnotic',
-    chords: ['I', 'V', 'ii'],
-    tempo: 130,
-  },
-  {
-    title: 'The Scientist',
-    artist: 'Coldplay',
-    note: 'ii–IV–I–V — starts on ii minor, Chris Martin\'s most emotional piano ballad',
-    chords: ['ii', 'IV', 'I', 'V'],
-    tempo: 75,
-  },
-  {
-    title: 'Numb',
-    artist: 'Linkin Park',
-    note: 'vi–IV–I–V — F#m D A E, driving piano intro that became a generation\'s anthem',
-    chords: ['vi', 'IV', 'I', 'V'],
-    tempo: 96,
-  },
-  {
-    title: 'Clocks (chorus)',
-    artist: 'Coldplay',
-    note: 'IV–I–V — Fmaj7 Eb Bb, the chorus shifts the loop for lift',
-    chords: ['IVmaj7', 'I', 'V'],
-    tempo: 130,
-  },
-  {
-    title: 'Your Song',
-    artist: 'Elton John',
-    note: 'I–IV–V–IV — Eb Ab Bb Ab, Elton\'s debut, the IV returning is the warmth',
-    chords: ['I', 'IV', 'V', 'IV'],
-    tempo: 80,
-  },
-  {
-    title: 'Tiny Dancer',
-    artist: 'Elton John',
-    note: 'I–IV–I–V — slow block chords, Elton\'s open-highway feel',
-    chords: ['I', 'IV', 'I', 'V'],
-    tempo: 70,
-  },
-  {
-    title: 'Crocodile Rock',
-    artist: 'Elton John',
-    note: 'I–vi–IV–V — the 50s doo-wop loop at full throttle piano',
-    chords: ['I', 'vi', 'IV', 'V'],
-    tempo: 167,
-  },
-  {
-    title: 'A Whiter Shade of Pale',
-    artist: 'Procol Harum',
-    note: 'I–V–vi–IV–ii–V — Bach-inspired descending bass, organ/piano cornerstone',
-    chords: ['I', 'V', 'vi', 'IV', 'ii', 'V'],
-    tempo: 60,
-  },
-  {
-    title: 'Autumn Leaves',
-    artist: 'Jazz Standard',
-    note: 'ii7–V7–Imaj7–IVmaj7 — the ii-V-I every jazz pianist learns first',
-    chords: ['ii7', 'V7', 'Imaj7', 'IVmaj7'],
-    tempo: 80,
-  },
-  {
-    title: 'Fly Me to the Moon',
-    artist: 'Bart Howard',
-    note: 'ii7–V7–Imaj7–vi7 — cycle of fifths, perfect jazz piano study',
-    chords: ['ii7', 'V7', 'Imaj7', 'vi7'],
-    tempo: 140,
-  },
-  {
-    title: 'Can\'t Help Falling in Love',
-    artist: 'Elvis Presley',
-    note: 'I–iii–IV–V — the iii chord lifts it out of ordinary and makes it timeless',
-    chords: ['I', 'iii', 'IV', 'V'],
-    tempo: 56,
-  },
-  {
-    title: 'All of Me',
-    artist: 'John Legend',
-    note: 'vi–IV–I–V — Ab F Db Ab, opening on vi gives it the minor-tonic weight',
-    chords: ['vi', 'IV', 'I', 'V'],
-    tempo: 63,
-  },
-  {
-    title: 'Gravity',
-    artist: 'John Mayer',
-    note: 'I–IV–I–V–ii–IV — slow blues-flavored piano-led pop',
-    chords: ['I', 'IV', 'I', 'V', 'ii', 'IV'],
-    tempo: 66,
-  },
-  // ── Non-diatonic songs ────────────────────────────────────────────────
-  {
-    title: 'Hey Jude (outro)',
-    artist: 'The Beatles',
-    note: 'I–♭VII–IV–I — the "na-na-na" section borrows ♭VII, the song\'s non-diatonic twist',
-    chords: ['I', 'bVII', 'IV', 'I'],
-    hasNonDiatonic: true,
-    tempo: 74,
-  },
-  {
-    title: 'Creep',
-    artist: 'Radiohead',
-    note: 'I–♭III–IV–iv — that ♭III is the "wrong" jarring chord before IV lands',
-    chords: ['I', 'bIII', 'IV', 'iv'],
-    hasNonDiatonic: true,
-    tempo: 92,
-  },
-  {
-    title: 'Africa',
-    artist: 'Toto',
-    note: 'I–V–♭VII–IV — the ♭VII (Mixolydian borrow) is what makes it so open and majestic',
-    chords: ['I', 'V', 'bVII', 'IV'],
-    hasNonDiatonic: true,
-    tempo: 93,
-  },
-  {
-    title: 'Take on Me',
-    artist: 'a-ha',
-    note: 'I–V/V–V–IV — the V/V secondary dominant drives the famous synth hook forward',
-    chords: ['I', 'V/V', 'V', 'IV'],
-    hasNonDiatonic: true,
-    tempo: 169,
-  },
-  {
-    title: 'I Will Follow You into the Dark',
-    artist: 'Death Cab for Cutie',
-    note: 'I–IV–iv–I — the minor iv is the emotional gut-punch in an otherwise bright song',
-    chords: ['I', 'IV', 'iv', 'I'],
-    hasNonDiatonic: true,
-    tempo: 96,
-  },
-  {
-    title: 'Just the Way You Are',
-    artist: 'Bruno Mars',
-    note: 'I–♭VII–IV–I — the ♭VII Mixolydian flavour gives it the soul/R&B warmth',
-    chords: ['I', 'bVII', 'IV', 'I'],
-    hasNonDiatonic: true,
-    tempo: 109,
-  },
-];
-// ─── Levels ────────────────────────────────────────────────────────────────
-
 export interface ProgressionLevel {
   n: string;
   /** short description shown in the UI */
@@ -283,8 +82,6 @@ export interface ProgressionLevel {
   /** Min/max progression length (inclusive). 'random' = exercise default */
   minLen: number;
   maxLen: number;
-  /** If true, questions are drawn from SONG_PROGRESSIONS instead of randomly generated */
-  isSong?: boolean;
   /** If true, includes non-diatonic chords */
   isNonDiatonic?: boolean;
   /** filter songs to only those with hasNonDiatonic */
@@ -311,16 +108,16 @@ export const PROGRESSION_LEVELS: ProgressionLevel[] = [
     minLen: 3, maxLen: 5,
   },
   {
-    n: 'Triads + 7ths',
-    desc: 'Full diatonic palette',
-    ch: ['I', 'Imaj7', 'ii', 'ii7', 'iii', 'iii7', 'IV', 'IVmaj7', 'V', 'V7', 'vi', 'vi7', 'vii°', 'viiø7'],
+    n: 'Triads + Primary 7ths',
+    desc: 'Triads plus V7, Imaj7, IVmaj7',
+    ch: ['I', 'Imaj7', 'ii', 'iii', 'IV', 'IVmaj7', 'V', 'V7', 'vi', 'vii°'],
     minLen: 3, maxLen: 5,
   },
   {
-    n: 'Song Progressions',
-    desc: 'Real songs',
-    isSong: true,
-    minLen: 3, maxLen: 8,
+    n: 'Triads + All 7ths',
+    desc: 'Full diatonic palette',
+    ch: ['I', 'Imaj7', 'ii', 'ii7', 'iii', 'iii7', 'IV', 'IVmaj7', 'V', 'V7', 'vi', 'vi7', 'vii°', 'viiø7'],
+    minLen: 3, maxLen: 5,
   },
   {
     n: 'Non-Diatonic',

@@ -116,6 +116,8 @@ export default function App() {
   // Mistake tracking — rolling buffer of last 50 wrong answers
   const [mistakes, setMistakes] = useState<MistakeEntry[]>([]);
   const [keyNudge, setKeyNudge] = useState<{ toKey: string } | null>(null);
+  // Item 2: the mistake-pattern insight shows for exactly one turn, then auto-dismisses.
+  const [showInsights, setShowInsights] = useState<boolean>(false);
   const nudgeStreakRef = useRef(0);
 
   const activeExercise = useMemo(
@@ -156,6 +158,7 @@ export default function App() {
           const next = [...prev, entry];
           return next.length > 50 ? next.slice(-50) : next;
         });
+        setShowInsights(true);
       }
       nudgeStreakRef.current = 0;
     } else if (fb.ok) {
@@ -184,7 +187,13 @@ export default function App() {
     resetQuestion();
   }, [resetQuestion]);
 
-  const mistakeInsights = analyzeMistakes(mistakes);
+  // Item 2: advancing to the next question clears the one-turn insight.
+  const handleNext = useCallback(() => {
+    setShowInsights(false);
+    nextQuestion();
+  }, [nextQuestion]);
+
+  const mistakeInsights = showInsights ? analyzeMistakes(mistakes) : [];
 
   return (
     <div className="app">
@@ -256,7 +265,7 @@ export default function App() {
         timerLabel={timerLabel}
         onStart={nextQuestion}
         onReplay={replay}
-        onNext={nextQuestion}
+        onNext={handleNext}
         onGuess={handleAnswer}
         onResetScore={resetScore}
         onResetTimer={resetTimer}

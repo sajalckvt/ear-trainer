@@ -5,7 +5,6 @@
 import {
   PROGRESSION_CHORD_MAP,
   PROGRESSION_LEVELS,
-  SONG_PROGRESSIONS,
 } from '../data/progressions';
 import { SAMPLE_LO, SAMPLE_HI } from '../data/constants';
 import { pm, type InstrumentId } from '../audio/engine';
@@ -14,8 +13,6 @@ import type { Exercise, AnswerOption } from './types';
 export interface ProgressionPayload {
   chordIds: string[];
   keyRoot: number;
-  /** Song metadata if this question came from SONG_PROGRESSIONS */
-  song?: { title: string; artist: string; note: string; hasNonDiatonic?: boolean };
 }
 
 // ─── Playback timing ────────────────────────────────────────────────────────
@@ -107,37 +104,6 @@ export const progressionExercise: Exercise<ProgressionPayload> = {
     while (keyRoot + 17 + 4 > SAMPLE_HI) keyRoot -= 12;
     while (keyRoot < SAMPLE_LO) keyRoot += 12;
 
-    // ── Song progression mode ──────────────────────────────────────────
-    if (lv.isSong) {
-      const pool = SONG_PROGRESSIONS;
-      const song = pick(pool);
-      const seq = song.chords;
-
-      const allNotes: number[] = [];
-      for (const chId of seq) {
-        const ch = PROGRESSION_CHORD_MAP[chId];
-        if (!ch) continue;
-        const notes = voiceChord(keyRoot + ch.rootOffset, ch.iv);
-        allNotes.push(...notes);
-      }
-
-      return {
-        root: keyRoot,
-        notes: allNotes,
-        payload: {
-          chordIds: seq,
-          keyRoot,
-          song: {
-            title: song.title,
-            artist: song.artist,
-            note: song.note,
-            hasNonDiatonic: song.hasNonDiatonic,
-          },
-        },
-        pickId: `${song.title}-${keyOffset}`,
-        displayLabel: `${seq.length} chords · identify each`,
-      };
-    }
 
     // ── Random progression mode ───────────────────────────────────────
     const allowed = lv.ch ?? ['I', 'IV', 'V'];
@@ -177,21 +143,6 @@ export const progressionExercise: Exercise<ProgressionPayload> = {
   answers(levelIndex): AnswerOption[] {
     const lv = PROGRESSION_LEVELS[levelIndex];
 
-    // For song/non-diatonic levels, return all relevant chords
-    if (lv.isSong) {
-      // Pool: all chords that appear in any song
-      const usedIds = new Set(SONG_PROGRESSIONS.flatMap((s) => s.chords));
-      return [...usedIds].map((chId) => {
-        const ch = PROGRESSION_CHORD_MAP[chId];
-        return {
-          id: ch.id,
-          label: ch.n,
-          short: ch.sh,
-          color: ch.co,
-          hint: ch.fn,
-        };
-      });
-    }
 
     const ids = lv.ch ?? ['I', 'IV', 'V'];
     return ids.map((chId) => {

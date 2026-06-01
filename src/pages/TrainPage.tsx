@@ -332,10 +332,6 @@ export function TrainPage(props: TrainPageProps) {
 
   let pianoLabel = '';
   let pianoLabelColor = '#6366f1';
-  // For song progressions, expose the song title/artist after answering
-  const songMeta = (activeExercise.id === 'progression' && question)
-    ? (question.payload as ProgressionPayload).song
-    : null;
 
   if (activeExercise.id === 'progression' && question) {
     const payload = question.payload as ProgressionPayload;
@@ -508,30 +504,6 @@ export function TrainPage(props: TrainPageProps) {
                 onReviewSlot={handleSlotReview}
                 onPlayChord={handlePlayChord}
               />
-              {quizPhase === 'answered' && songMeta && (
-                <div style={{
-                  margin: '8px 0',
-                  padding: '10px 14px',
-                  background: 'rgba(167,139,250,0.07)',
-                  border: '1px solid rgba(167,139,250,0.18)',
-                  borderRadius: 10,
-                  fontSize: 12,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#d4d4d8' }}>{songMeta.title}</span>
-                    <span style={{ color: '#666' }}>·</span>
-                    <span style={{ color: '#888' }}>{songMeta.artist}</span>
-                    {songMeta.hasNonDiatonic && (
-                      <span style={{
-                        marginLeft: 'auto', fontSize: 10, fontWeight: 700,
-                        color: '#f97316', background: 'rgba(249,115,22,0.12)',
-                        padding: '2px 6px', borderRadius: 4,
-                      }}>NON-DIATONIC</span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#888', lineHeight: 1.5 }}>{songMeta.note}</div>
-                </div>
-              )}
             </>
           ) : (
             <AnswerGrid
