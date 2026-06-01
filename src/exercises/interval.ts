@@ -61,8 +61,11 @@ export const intervalExercise: Exercise<IntervalPayload> = {
   },
 
   play(q, instId: InstrumentId) {
-    pm(instId, q.notes[0], 0);
-    pm(instId, q.notes[1], 0.75);
+    // Unison: two strikes of the same pitch are inaudible as "two" unless
+    // they differ in loudness — play the second softer so the repeat is clear.
+    const sameNote = q.notes[0] === q.notes[1];
+    pm(instId, q.notes[0], 0, 1);
+    pm(instId, q.notes[1], 0.75, sameNote ? 0.6 : 1);
   },
 
   answers(levelIndex): AnswerOption[] {

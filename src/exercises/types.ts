@@ -72,7 +72,7 @@ export interface Exercise<TPayload = unknown> {
   play(
     q: Question & { payload: TPayload },
     instId: InstrumentId,
-    opts?: { arpeggio?: boolean },
+    opts?: { arpeggio?: boolean; humanize?: boolean; dynamics?: number },
   ): void;
 
   /** Static answer set for the level (used by most exercises). */

@@ -38,6 +38,9 @@ export interface UseQuizStateOptions {
   cadenceEnabled: boolean;
   spread: boolean;
   arpeggio: boolean;
+  humanize: boolean;
+  /** base velocity from the manual dynamics control (0..1) */
+  dynamics: number;
   modeChordCount: number;
   instrument: InstrumentId;
   progressionLength?: number;
@@ -86,14 +89,14 @@ export function useQuizState(opts: UseQuizStateOptions) {
     setSession((s) => ({ ...s, question: q, feedback: null, quizPhase: 'playing' }));
 
     playCadence(60 + keyOffset, opts.instrument, opts.cadenceEnabled, () => {
-      opts.exercise.play(q, opts.instrument, { arpeggio: opts.arpeggio });
+      opts.exercise.play(q, opts.instrument, { arpeggio: opts.arpeggio, humanize: opts.humanize, dynamics: opts.dynamics });
     });
-  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.distanceDirection, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.modeChordCount, opts.progressionLength, opts.instrument]);
+  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.distanceDirection, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.humanize, opts.dynamics, opts.modeChordCount, opts.progressionLength, opts.instrument]);
 
   const replay = useCallback(() => {
     if (!session.question) return;
-    opts.exercise.play(session.question, opts.instrument, { arpeggio: opts.arpeggio });
-  }, [session.question, opts.exercise, opts.instrument, opts.arpeggio]);
+    opts.exercise.play(session.question, opts.instrument, { arpeggio: opts.arpeggio, humanize: opts.humanize, dynamics: opts.dynamics });
+  }, [session.question, opts.exercise, opts.instrument, opts.arpeggio, opts.humanize, opts.dynamics]);
 
   const answer = useCallback(
     (guess: string | number) => {

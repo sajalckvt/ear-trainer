@@ -108,6 +108,9 @@ export default function App() {
   const [cadenceEnabled, setCadenceEnabled] = useState<boolean>(false);
   const [spread, setSpread] = useState<boolean>(false);
   const [arpeggio, setArpeggio] = useState<boolean>(true);
+  const [humanize, setHumanize] = useState<boolean>(false);
+  // Manual dynamics: 'soft' | 'medium' | 'hard' → base velocity.
+  const [dynamics, setDynamics] = useState<'soft' | 'medium' | 'hard'>('medium');
   const [modeChordCount, setModeChordCount] = useState<number>(2);
   const [distanceDirection, setDistanceDirection] = useState<'asc' | 'desc' | 'both'>('both');
   const [instrument, setInstrument] = useState<InstrumentId>('acoustic_grand_piano');
@@ -125,9 +128,12 @@ export default function App() {
     [exerciseId]
   );
 
+  const dynamicsVel = dynamics === 'soft' ? 0.5 : dynamics === 'hard' ? 1 : 0.75;
+
   const { session, nextQuestion, replay, answer, resetScore, resetQuestion } = useQuizState({
     exercise: activeExercise, levelIndex, keyName, direction, distanceDirection,
-    cadenceEnabled, spread, arpeggio, modeChordCount, instrument, progressionLength,
+    cadenceEnabled, spread, arpeggio, humanize, dynamics: dynamicsVel,
+    modeChordCount, instrument, progressionLength,
   });
 
   const { formatted: timerLabel, reset: resetTimer } = useTrainingTimer();
@@ -246,6 +252,10 @@ export default function App() {
         onSpreadChange={setSpread}
         arpeggio={arpeggio}
         onArpeggioChange={setArpeggio}
+        humanize={humanize}
+        onHumanizeChange={setHumanize}
+        dynamics={dynamics}
+        onDynamicsChange={setDynamics}
         distanceDirection={distanceDirection}
         onDistanceDirectionChange={setDistanceDirection}
         modeChordCount={modeChordCount}

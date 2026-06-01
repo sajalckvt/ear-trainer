@@ -131,30 +131,33 @@ const NOTE_GAIN: Partial<Record<InstrumentId, Record<string, number>>> = {
   },
 };
 
-function playBuf(audioBuf: AudioBuffer, instId: InstrumentId, note: string): void {
+function playBuf(audioBuf: AudioBuffer, instId: InstrumentId, note: string, vel = 1): void {
   const a = ensureCtx();
   if (a.state === 'suspended') a.resume().catch(() => {});
   const src = a.createBufferSource();
   src.buffer = audioBuf;
   const g = a.createGain();
   const noteBoost = NOTE_GAIN[instId]?.[note] ?? 1;
-  g.gain.value = 2.5 * noteBoost;
+  // vel (0..1) scales the strike loudness. Default 1 = unchanged behaviour.
+  // Clamp to a sane floor so a note never goes fully silent.
+  const v = Math.max(0.15, Math.min(1, vel));
+  g.gain.value = 2.5 * noteBoost * v;
   src.connect(g).connect(a.destination);
   src.start(0);
 }
 
 /** Play a note on an instrument, with optional delay in seconds. */
-export function pn(instId: InstrumentId, note: string, dl = 0): void {
+export function pn(instId: InstrumentId, note: string, dl = 0, vel = 1): void {
   decodeNote(instId, note).then((buf) => {
     if (!buf) return;
-    if (dl > 0) setTimeout(() => playBuf(buf, instId, note), dl * 1000);
-    else playBuf(buf, instId, note);
+    if (dl > 0) setTimeout(() => playBuf(buf, instId, note, vel), dl * 1000);
+    else playBuf(buf, instId, note, vel);
   });
 }
 
 /** Play a MIDI number on the given instrument with optional delay. */
-export function pm(instId: InstrumentId, midi: number, dl = 0): void {
-  pn(instId, m2n(midi), dl);
+export function pm(instId: InstrumentId, midi: number, dl = 0, vel = 1): void {
+  pn(instId, m2n(midi), dl, vel);
 }
 
 /**

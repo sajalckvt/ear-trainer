@@ -4,7 +4,7 @@ import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
 import { pm, type InstrumentId } from '../audio/engine';
 import {
-  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, DistanceDirectionToggle, ModeChordCountToggle, ProgressionLengthToggle, InstrumentPicker,
+  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, HumanizeToggle, DynamicsControl, type Dynamics, DistanceDirectionToggle, ModeChordCountToggle, ProgressionLengthToggle, InstrumentPicker,
 } from '../components/Controls';
 import { ScoreBar } from '../components/ScoreBar';
 import { PlayArea } from '../components/PlayArea';
@@ -41,6 +41,10 @@ interface TrainPageProps {
   onSpreadChange: (v: boolean) => void;
   arpeggio: boolean;
   onArpeggioChange: (v: boolean) => void;
+  humanize: boolean;
+  onHumanizeChange: (v: boolean) => void;
+  dynamics: Dynamics;
+  onDynamicsChange: (v: Dynamics) => void;
   distanceDirection: 'asc' | 'desc' | 'both';
   onDistanceDirectionChange: (v: 'asc' | 'desc' | 'both') => void;
   modeChordCount: number;
@@ -74,6 +78,8 @@ export function TrainPage(props: TrainPageProps) {
     keyName, onKeyChange, cadenceEnabled, onCadenceChange,
     spread, onSpreadChange,
     arpeggio, onArpeggioChange,
+    humanize, onHumanizeChange,
+    dynamics, onDynamicsChange,
     distanceDirection, onDistanceDirectionChange,
     modeChordCount, onModeChordCountChange,
     progressionLength, onProgressionLengthChange,
@@ -320,6 +326,13 @@ export function TrainPage(props: TrainPageProps) {
           if (octave <= 79) highlights[octave] = degreeColors[0];
         }
       }
+    } else if (activeExercise.id === 'spelling') {
+      // ── Name the Chord: reveal all notes immediately (reading them is
+      // the task). Bass note in a distinct accent so inversions read clearly.
+      const sorted = [...question.notes].sort((a, b) => a - b);
+      sorted.forEach((n, i) => {
+        highlights[n] = i === 0 ? '#f43f5e' : '#6366f1';
+      });
     } else {
       // ── Standard exercises: original behaviour
       highlights[question.root] = '#6366f1';
@@ -357,6 +370,12 @@ export function TrainPage(props: TrainPageProps) {
       pianoLabel = 'Listen for the diagnostic chord pair';
       pianoLabelColor = '#6366f1';
     }
+  } else if (activeExercise.id === 'spelling' && question) {
+    // Always show the spelling (note names) prominently — that's the prompt.
+    pianoLabel = question.displayLabel ?? '';
+    pianoLabelColor = quizPhase === 'answered'
+      ? (feedbackInfo?.color ?? '#a78bfa')
+      : '#d4d4d8';
   } else if (question && quizPhase === 'answered') {
     pianoLabel = question.notes.map(m2d).join(' ');
     pianoLabelColor = feedbackInfo?.color ?? '#6366f1';
@@ -420,6 +439,12 @@ export function TrainPage(props: TrainPageProps) {
           <CadenceToggle on={cadenceEnabled} onChange={onCadenceChange} />
           {activeExercise.id === 'triad' && <SpreadToggle on={spread} onChange={onSpreadChange} />}
           {activeExercise.id === 'triad' && <ArpeggioToggle on={arpeggio} onChange={onArpeggioChange} />}
+          {(activeExercise.id === 'triad' || activeExercise.id === 'spelling') && (
+            <HumanizeToggle on={humanize} onChange={onHumanizeChange} />
+          )}
+          {(activeExercise.id === 'triad' || activeExercise.id === 'spelling') && (
+            <DynamicsControl value={dynamics} onChange={onDynamicsChange} />
+          )}
           {activeExercise.id === 'distance' && (
             <DistanceDirectionToggle value={distanceDirection} onChange={onDistanceDirectionChange} />
           )}

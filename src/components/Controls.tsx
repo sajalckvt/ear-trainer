@@ -280,6 +280,62 @@ export function ArpeggioToggle({
   );
 }
 
+// ─── Humanize toggle (per-note velocity jitter) ───────────────────────────
+export function HumanizeToggle({
+  on,
+  onChange,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="trow">
+      <span>
+        Humanize
+        <span className="trow-sub"> · slight per-note volume variation</span>
+      </span>
+      <span
+        role="switch"
+        aria-checked={on}
+        tabIndex={0}
+        className={`tog${on ? ' on' : ''}`}
+        onClick={() => onChange(!on)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') onChange(!on);
+        }}
+      />
+    </div>
+  );
+}
+
+// ─── Dynamics control (manual soft/medium/hard) ───────────────────────────
+export type Dynamics = 'soft' | 'medium' | 'hard';
+
+export function DynamicsControl({
+  value,
+  onChange,
+}: {
+  value: Dynamics;
+  onChange: (v: Dynamics) => void;
+}) {
+  return (
+    <div className="trow">
+      <span>Dynamics</span>
+      <div className="pg">
+        {(['soft', 'medium', 'hard'] as const).map((d) => (
+          <button
+            key={d}
+            className={`pill${value === d ? ' on' : ''}`}
+            onClick={() => onChange(d)}
+          >
+            {d === 'soft' ? 'pp' : d === 'medium' ? 'mf' : 'ff'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Instrument picker ────────────────────────────────────────────────────
 export function InstrumentPicker({
   instrument,
