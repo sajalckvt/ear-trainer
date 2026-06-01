@@ -109,7 +109,8 @@ export default function App() {
   const [spread, setSpread] = useState<boolean>(false);
   const [arpeggio, setArpeggio] = useState<boolean>(true);
   const [humanize, setHumanize] = useState<boolean>(false);
-  // Manual dynamics: 'soft' | 'medium' | 'hard' → base velocity.
+  // Dynamics vary automatically by default; user may lock to a fixed level.
+  const [varyDynamics, setVaryDynamics] = useState<boolean>(true);
   const [dynamics, setDynamics] = useState<'soft' | 'medium' | 'hard'>('medium');
   const [modeChordCount, setModeChordCount] = useState<number>(2);
   const [distanceDirection, setDistanceDirection] = useState<'asc' | 'desc' | 'both'>('both');
@@ -128,7 +129,10 @@ export default function App() {
     [exerciseId]
   );
 
-  const dynamicsVel = dynamics === 'soft' ? 0.5 : dynamics === 'hard' ? 1 : 0.75;
+  // -1 signals 'varying' to the exercises; otherwise a fixed base velocity.
+  const dynamicsVel = varyDynamics
+    ? -1
+    : (dynamics === 'soft' ? 0.5 : dynamics === 'hard' ? 1 : 0.75);
 
   const { session, nextQuestion, replay, answer, resetScore, resetQuestion } = useQuizState({
     exercise: activeExercise, levelIndex, keyName, direction, distanceDirection,
@@ -254,6 +258,8 @@ export default function App() {
         onArpeggioChange={setArpeggio}
         humanize={humanize}
         onHumanizeChange={setHumanize}
+        varyDynamics={varyDynamics}
+        onVaryDynamicsChange={setVaryDynamics}
         dynamics={dynamics}
         onDynamicsChange={setDynamics}
         distanceDirection={distanceDirection}

@@ -12,6 +12,7 @@ import { AnswerGrid } from '../components/AnswerGrid';
 import { ProgressionAnswerBuilder } from '../components/ProgressionAnswerBuilder';
 import { Piano } from '../components/Piano';
 import { Fretboard } from '../components/Fretboard';
+import { resolveAllShapes } from '../data/caged';
 import { FeedbackSheet } from '../components/FeedbackSheet';
 import { MelodyBoard } from '../components/MelodyBoard';
 import {
@@ -43,6 +44,8 @@ interface TrainPageProps {
   onArpeggioChange: (v: boolean) => void;
   humanize: boolean;
   onHumanizeChange: (v: boolean) => void;
+  varyDynamics: boolean;
+  onVaryDynamicsChange: (v: boolean) => void;
   dynamics: Dynamics;
   onDynamicsChange: (v: Dynamics) => void;
   distanceDirection: 'asc' | 'desc' | 'both';
@@ -79,6 +82,7 @@ export function TrainPage(props: TrainPageProps) {
     spread, onSpreadChange,
     arpeggio, onArpeggioChange,
     humanize, onHumanizeChange,
+    varyDynamics, onVaryDynamicsChange,
     dynamics, onDynamicsChange,
     distanceDirection, onDistanceDirectionChange,
     modeChordCount, onModeChordCountChange,
@@ -138,7 +142,7 @@ export function TrainPage(props: TrainPageProps) {
 
   // Start the audio timer whenever a new question begins playing
   useEffect(() => {
-    if (quizPhase === 'playing' && question) {
+    if (quizPhase === 'playing' && question && !activeExercise.silentStart) {
       startAudioTimer(estimateAudioDuration(question));
     }
     if (quizPhase === 'answered' || quizPhase === 'idle') {
@@ -153,6 +157,9 @@ export function TrainPage(props: TrainPageProps) {
     if (audioTimerRef.current) clearTimeout(audioTimerRef.current);
   }, []);
 
+  // Reset the CAGED position whenever a new question loads.
+  useEffect(() => { setCagedPos(0); }, [question?.pickId]);
+
   // ─── Progression playback animation ───────────────────────────────────────
   // For the progression exercise, we step a `progChordIdx` index forward in
   // sync with audio playback so piano/fretboard/slots all highlight only the
@@ -161,6 +168,8 @@ export function TrainPage(props: TrainPageProps) {
   // After answer, the user can click any slot to set this index manually and
   // re-hear just that chord — the step-through review.
   const [progChordIdx, setProgChordIdx] = useState<number | null>(null);
+  // CAGED position index for the guitar shape display (cycles on tap).
+  const [cagedPos, setCagedPos] = useState<number>(0);
   const progTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const clearProgTimers = () => {
@@ -383,6 +392,35 @@ export function TrainPage(props: TrainPageProps) {
     pianoLabel = question.displayLabel ?? `Root: ${m2d(question.root)}`;
   }
 
+  // ── CAGED guitar shape (chord exercises, on reveal) ──────────────────────
+  // Show a cycle-able CAGED chord grip for the revealed chord's root.
+  let cagedShape: {
+    frets: number[]; rootPc: number; shapeName: string;
+    onCycle: () => void; positionLabel: string;
+  } | undefined;
+
+  const chordExercise =
+    activeExercise.id === 'triad' ||
+    activeExercise.id === 'spelling' ||
+    activeExercise.id === 'inversion';
+
+  if (chordExercise && question && quizPhase === 'answered') {
+    // Root pitch class: from the question root (the chord's root midi).
+    const rootPc = ((question.root % 12) + 12) % 12;
+    const all = resolveAllShapes(rootPc);
+    if (all.length > 0) {
+      const idx = ((cagedPos % all.length) + all.length) % all.length;
+      const cur = all[idx];
+      cagedShape = {
+        frets: cur.frets,
+        rootPc,
+        shapeName: cur.shape,
+        positionLabel: `pos ${idx + 1}/${all.length}`,
+        onCycle: () => setCagedPos((p) => p + 1),
+      };
+    }
+  }
+
   // Sheet visible: open when feedback exists and not dismissed
   const sheetOpen = !sheetDismissed &&
     (quizPhase === 'close_miss' || quizPhase === 'answered');
@@ -443,7 +481,7 @@ export function TrainPage(props: TrainPageProps) {
             <HumanizeToggle on={humanize} onChange={onHumanizeChange} />
           )}
           {(activeExercise.id === 'triad' || activeExercise.id === 'spelling') && (
-            <DynamicsControl value={dynamics} onChange={onDynamicsChange} />
+            <DynamicsControl vary={varyDynamics} onVaryChange={onVaryDynamicsChange} fixed={dynamics} onFixedChange={onDynamicsChange} />
           )}
           {activeExercise.id === 'distance' && (
             <DistanceDirectionToggle value={distanceDirection} onChange={onDistanceDirectionChange} />
@@ -540,8 +578,15 @@ export function TrainPage(props: TrainPageProps) {
             />
           )}
 
-          <Piano highlights={highlights} headerLabel={pianoLabel} headerColor={pianoLabelColor} />
-          <Fretboard highlights={highlights} />
+          <Piano
+            highlights={highlights}
+            headerLabel={pianoLabel}
+            headerColor={pianoLabelColor}
+            onKeyClick={activeExercise.id === 'spelling'
+              ? (midi) => pm(instrument, midi, 0, 0.85)
+              : undefined}
+          />
+          <Fretboard highlights={highlights} shape={cagedShape} />
 
           {sheetOpen && feedbackInfo && (
             <FeedbackSheet

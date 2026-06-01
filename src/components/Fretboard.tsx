@@ -2,6 +2,19 @@ import { ND, GS } from '../data/constants';
 
 interface FretboardProps {
   highlights: Record<number, string>;
+  /**
+   * Optional CAGED shape overlay. When provided, the fretboard shows ONLY
+   * this shape's fretted notes (low E → high e; -1 = muted) instead of every
+   * pitch-class match. `rootPc` marks which notes are the chord root (drawn
+   * in the accent colour). `shapeName`/`onCycle` drive the position cycler.
+   */
+  shape?: {
+    frets: number[];
+    rootPc: number;
+    shapeName: string;
+    onCycle: () => void;
+    positionLabel: string;
+  };
 }
 
 const FRETS = 15;
@@ -24,7 +37,7 @@ function sY(s: number): number {
   return TP + (s + 1) * SS;
 }
 
-export function Fretboard({ highlights }: FretboardProps) {
+export function Fretboard({ highlights, shape }: FretboardProps) {
   const width = BW + LP + 16;
   const height = SS * 7 + TP + 10;
 
@@ -100,36 +113,90 @@ export function Fretboard({ highlights }: FretboardProps) {
     );
   });
 
-  // Highlight dots for notes on the fretboard
+  // Highlight dots. Two modes:
+  //  (a) CAGED shape overlay → only this shape's fretted notes, root accented.
+  //  (b) default → every pitch-class match from `highlights`.
   const dots: React.ReactElement[] = [];
-  GS.forEach((s, si) => {
-    for (let f = 0; f <= FRETS; f++) {
-      const midi = s.m + f;
-      const hl = highlights[midi];
-      if (!hl) continue;
+  const muteMarks: React.ReactElement[] = [];
+
+  if (shape) {
+    // shape.frets is low E → high e; GS is high e → low E, so map i → 5 - i.
+    shape.frets.forEach((f, lowToHigh) => {
+      const si = 5 - lowToHigh;                 // GS index
+      const stringMidiOpen = GS[si].m;
+      if (f < 0) {
+        // muted/unplayed string → small ✕ near the nut
+        muteMarks.push(
+          <text key={`mute-${si}`} x={LP - 12} y={sY(si) + 4}
+            textAnchor="middle" fontSize={10} fill="#a33" fontWeight={800}
+            fontFamily="JetBrains Mono, monospace">×</text>
+        );
+        return;
+      }
+      const midi = stringMidiOpen + f;
+      const isRoot = (((midi % 12) + 12) % 12) === shape.rootPc;
+      const col = isRoot ? '#f43f5e' : '#6366f1';
       const cx = f === 0 ? LP + 3 : mX(f);
       const cy = sY(si);
       dots.push(
-        <g key={`dot-${si}-${f}`} filter="url(#ng)">
-          <circle cx={cx} cy={cy} r={8.5} fill={hl} />
-          <circle cx={cx} cy={cy} r={8.5} fill="none" stroke="#fff" strokeWidth={1.2} opacity={0.25} />
-          <text
-            x={cx} y={cy + 3.5}
-            textAnchor="middle" fontSize={7.5} fill="#fff"
-            fontWeight={800} fontFamily="JetBrains Mono, monospace"
-          >
+        <g key={`sdot-${si}`} filter="url(#ng)">
+          <circle cx={cx} cy={cy} r={9} fill={col} />
+          <circle cx={cx} cy={cy} r={9} fill="none" stroke="#fff" strokeWidth={isRoot ? 1.8 : 1.0} opacity={isRoot ? 0.55 : 0.25} />
+          <text x={cx} y={cy + 3.5} textAnchor="middle" fontSize={7.5} fill="#fff"
+            fontWeight={800} fontFamily="JetBrains Mono, monospace">
             {ND[((midi % 12) + 12) % 12]}
           </text>
         </g>
       );
-    }
-  });
+    });
+  } else {
+    GS.forEach((s, si) => {
+      for (let f = 0; f <= FRETS; f++) {
+        const midi = s.m + f;
+        const hl = highlights[midi];
+        if (!hl) continue;
+        const cx = f === 0 ? LP + 3 : mX(f);
+        const cy = sY(si);
+        dots.push(
+          <g key={`dot-${si}-${f}`} filter="url(#ng)">
+            <circle cx={cx} cy={cy} r={8.5} fill={hl} />
+            <circle cx={cx} cy={cy} r={8.5} fill="none" stroke="#fff" strokeWidth={1.2} opacity={0.25} />
+            <text
+              x={cx} y={cy + 3.5}
+              textAnchor="middle" fontSize={7.5} fill="#fff"
+              fontWeight={800} fontFamily="JetBrains Mono, monospace"
+            >
+              {ND[((midi % 12) + 12) % 12]}
+            </text>
+          </g>
+        );
+      }
+    });
+  }
 
   return (
     <div className="box">
       <div className="bh">
         <span>🎸</span>
         <span className="bl">Guitar</span>
+        {shape && (
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, color: '#888', fontFamily: 'JetBrains Mono, monospace' }}>
+              {shape.positionLabel}
+            </span>
+            <button
+              onClick={shape.onCycle}
+              style={{
+                fontSize: 11, fontWeight: 700, color: '#a78bfa',
+                background: 'rgba(167,139,250,0.12)',
+                border: '1px solid rgba(167,139,250,0.3)',
+                borderRadius: 6, padding: '3px 8px', cursor: 'pointer',
+              }}
+            >
+              {shape.shapeName}-shape · next →
+            </button>
+          </span>
+        )}
       </div>
       <div className="gw">
         <svg width={width} height={height} style={{ display: 'block' }}>
@@ -160,6 +227,7 @@ export function Fretboard({ highlights }: FretboardProps) {
           {fretNumbers}
           {strings}
           {dots}
+          {muteMarks}
         </svg>
       </div>
     </div>

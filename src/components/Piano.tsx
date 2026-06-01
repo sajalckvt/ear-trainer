@@ -8,6 +8,8 @@ interface PianoProps {
   headerLabel?: string;
   /** Optional color override for the header label text. */
   headerColor?: string;
+  /** If provided, keys become clickable and call this with the MIDI note. */
+  onKeyClick?: (midi: number) => void;
 }
 
 const KEY_W = 32;
@@ -16,7 +18,7 @@ function isBlackKey(midi: number): boolean {
   return [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
 }
 
-export function Piano({ highlights, headerLabel, headerColor }: PianoProps) {
+export function Piano({ highlights, headerLabel, headerColor, onKeyClick }: PianoProps) {
   // Build keyset from SAMPLE_LO..SAMPLE_HI
   const keys: Array<{ m: number; b: boolean; nm: string }> = [];
   for (let m = SAMPLE_LO; m <= SAMPLE_HI; m++) {
@@ -39,9 +41,11 @@ export function Piano({ highlights, headerLabel, headerColor }: PianoProps) {
               <div
                 key={k.m}
                 className="wk"
+                onClick={onKeyClick ? () => onKeyClick(k.m) : undefined}
                 style={{
                   left: i * KEY_W,
                   width: KEY_W - 2,
+                  cursor: onKeyClick ? 'pointer' : 'default',
                   background: hl
                     ? `linear-gradient(180deg, ${hl}cc, ${hl})`
                     : 'linear-gradient(180deg, #fafafa, #e4e4e4)',
@@ -66,9 +70,11 @@ export function Piano({ highlights, headerLabel, headerColor }: PianoProps) {
               <div
                 key={k.m}
                 className="bk"
+                onClick={onKeyClick ? () => onKeyClick(k.m) : undefined}
                 style={{
                   left: wi * KEY_W + KEY_W * 0.65,
                   width: KEY_W * 0.55,
+                  cursor: onKeyClick ? 'pointer' : 'default',
                   background: hl ? hl : 'linear-gradient(180deg, #2a2a3e, #18182a)',
                   color: hl ? '#fff' : '#555',
                 }}

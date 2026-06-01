@@ -11,12 +11,13 @@ interface ReferencePageProps {
   onInstrumentChange: (id: InstrumentId) => void;
 }
 
-type RefSection = 'notes' | 'intervals' | 'chords' | 'modes';
+type RefSection = 'notes' | 'intervals' | 'chords' | 'modes' | 'inversions';
 
 const SECTIONS: ReadonlyArray<{ id: RefSection; label: string }> = [
   { id: 'notes',     label: 'Notes' },
   { id: 'intervals', label: 'Intervals' },
   { id: 'chords',    label: 'Chords' },
+  { id: 'inversions', label: 'Inversions' },
   { id: 'modes',     label: 'Modes' },
 ];
 
@@ -48,6 +49,7 @@ export function ReferencePage({ visible, instrument, onInstrumentChange }: Refer
       {section === 'notes'     && <NotesSection     instrument={instrument} />}
       {section === 'intervals' && <IntervalsSection instrument={instrument} />}
       {section === 'chords'    && <ChordsSection    instrument={instrument} />}
+      {section === 'inversions' && <InversionsSection instrument={instrument} />}
       {section === 'modes'     && <ModesSection     instrument={instrument} />}
     </div>
   );
@@ -141,6 +143,72 @@ function ChordsSection({ instrument }: { instrument: InstrumentId }) {
           Tap to hear different I–IV–V voicings in C
         </div>
         <CadenceVoicings instrument={instrument} />
+      </div>
+    </>
+  );
+}
+
+// ─── Inversions section ─────────────────────────────────────────────────────
+// Explains root / 1st / 2nd inversion using a C major triad, with tap-to-hear
+// demos. Mirrors the train-page Inversions exercise so the layout is familiar.
+function InversionsSection({ instrument }: { instrument: InstrumentId }) {
+  // C major triad in C4. Inversion n moves the lowest n tones up an octave.
+  const voice = (inv: number): number[] => {
+    const notes = [60, 64, 67]; // C E G
+    for (let i = 0; i < inv; i++) notes[i] += 12;
+    return notes.slice().sort((a, b) => a - b);
+  };
+  const play = (inv: number) => {
+    const notes = voice(inv);
+    notes.forEach((n, i) => pm(instrument, n, i * 0.28));
+    notes.forEach((n) => pm(instrument, n, notes.length * 0.28 + 0.12));
+  };
+  const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const spell = (inv: number) =>
+    voice(inv).map((n) => NAMES[((n % 12) + 12) % 12]).join(' ');
+
+  const rows = [
+    { inv: 0, name: 'Root position', bass: 'C', color: '#22c55e',
+      desc: 'The root (C) is the lowest note — the most stable, settled sound.' },
+    { inv: 1, name: '1st inversion', bass: 'E', color: '#3b82f6',
+      desc: 'The 3rd (E) is in the bass — lighter, leans forward. Written C/E.' },
+    { inv: 2, name: '2nd inversion', bass: 'G', color: '#a855f7',
+      desc: 'The 5th (G) is in the bass — unstable, often a passing sound. Written C/G.' },
+  ];
+
+  return (
+    <>
+      <div className="bl" style={{ marginBottom: 10 }}>Chord inversions · using C major (C E G)</div>
+      <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
+        An inversion just changes which chord tone sits in the bass. Same three
+        notes, different lowest note — and a different feel. Tap each to hear it
+        arpeggiated then as a block.
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {rows.map((r) => (
+          <button
+            key={r.inv}
+            onClick={() => play(r.inv)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
+              padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
+              background: 'rgba(255,255,255,0.03)',
+              border: `1px solid ${r.color}55`,
+            }}
+          >
+            <span style={{ fontSize: 18 }}>🔈</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontWeight: 700, color: r.color, fontSize: 14 }}>{r.name}</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#d4d4d8' }}>
+                  {spell(r.inv)}
+                </span>
+                <span style={{ fontSize: 11, color: '#666' }}>· bass {r.bass}</span>
+              </div>
+              <div style={{ fontSize: 11, color: '#888', marginTop: 3, lineHeight: 1.4 }}>{r.desc}</div>
+            </div>
+          </button>
+        ))}
       </div>
     </>
   );

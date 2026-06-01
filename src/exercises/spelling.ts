@@ -74,6 +74,7 @@ export const spellingExercise: Exercise<SpellingPayload> = {
   name: 'Name the Chord',
   levels: SPELLING_LEVELS,
   usesDirection: false,
+  silentStart: true,
 
   generate({ levelIndex, keyOffset, recentPicks }) {
     const lv = SPELLING_LEVELS[levelIndex];
@@ -105,8 +106,11 @@ export const spellingExercise: Exercise<SpellingPayload> = {
 
   play(q, instId: InstrumentId, opts) {
     const humanize = opts?.humanize ?? false;
-    const base = opts?.dynamics ?? 1;
-    const vel = () => base * (humanize ? 0.85 + Math.random() * 0.15 : 1);
+    const base = opts?.dynamics ?? -1;
+    const vel = () =>
+      base < 0
+        ? 0.55 + Math.random() * 0.45
+        : base * (humanize ? 0.85 + Math.random() * 0.15 : 1);
     const ordered = [...q.notes].sort((a, b) => a - b);
     // Arpeggiate then stack, so the spelling is audible note-by-note.
     const gap = 0.3;

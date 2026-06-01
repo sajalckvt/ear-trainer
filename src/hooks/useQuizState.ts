@@ -86,17 +86,24 @@ export function useQuizState(opts: UseQuizStateOptions) {
     historyRef.current.push(q.pickId);
     if (historyRef.current.length > 10) historyRef.current.shift();
 
+    const silent = opts.exercise.silentStart === true;
+    // Silent-start still uses 'playing' (so answers are accepted) but plays
+    // no audio — the chord is heard only on reveal via feedback.demoPlay.
     setSession((s) => ({ ...s, question: q, feedback: null, quizPhase: 'playing' }));
 
-    playCadence(60 + keyOffset, opts.instrument, opts.cadenceEnabled, () => {
-      opts.exercise.play(q, opts.instrument, { arpeggio: opts.arpeggio, humanize: opts.humanize, dynamics: opts.dynamics });
-    });
+    if (!silent) {
+      playCadence(60 + keyOffset, opts.instrument, opts.cadenceEnabled, () => {
+        opts.exercise.play(q, opts.instrument, { arpeggio: opts.arpeggio, humanize: opts.humanize, dynamics: opts.dynamics });
+      });
+    }
   }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.distanceDirection, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.humanize, opts.dynamics, opts.modeChordCount, opts.progressionLength, opts.instrument]);
 
   const replay = useCallback(() => {
     if (!session.question) return;
+    // Silent-start exercises must not reveal the chord before answering.
+    if (opts.exercise.silentStart && !session.feedback) return;
     opts.exercise.play(session.question, opts.instrument, { arpeggio: opts.arpeggio, humanize: opts.humanize, dynamics: opts.dynamics });
-  }, [session.question, opts.exercise, opts.instrument, opts.arpeggio, opts.humanize, opts.dynamics]);
+  }, [session.question, session.feedback, opts.exercise, opts.instrument, opts.arpeggio, opts.humanize, opts.dynamics]);
 
   const answer = useCallback(
     (guess: string | number) => {

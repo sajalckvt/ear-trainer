@@ -463,14 +463,6 @@ export const IV_LEVELS: IntervalLevel[] = [
 export interface ChordLevel {
   n: string;
   ch: string[];
-  /**
-   * Inversion-drill mode. When set, the question is a single chord of the
-   * given quality, voiced in one of the allowed inversions, and the user
-   * identifies the *position* (not the quality). `ch` holds the single
-   * quality id used (e.g. ['maj']). `inv` lists allowed inversions:
-   * 0 = root, 1 = first, 2 = second.
-   */
-  inv?: number[];
 }
 
 export const CH_LEVELS: ChordLevel[] = [
@@ -480,11 +472,6 @@ export const CH_LEVELS: ChordLevel[] = [
   { n: 'Hard',      ch: ['maj7', 'min7', 'dom7'] },
   { n: 'Difficult', ch: ['m7b5', 'dim7', 'mMaj7'] },
   { n: 'Expert',    ch: ['dom7', 'dom7b9', 'dom7sharp9'] },
-  // ── Inversion drills (position-only answers; quality fixed per level) ──
-  { n: '1st Inv (Major)',       ch: ['maj'], inv: [0, 1] },
-  { n: '1st & 2nd Inv (Major)', ch: ['maj'], inv: [0, 1, 2] },
-  { n: '1st Inv (Minor)',       ch: ['min'], inv: [0, 1] },
-  { n: '1st & 2nd Inv (Minor)', ch: ['min'], inv: [0, 1, 2] },
 ];
 
 export interface Instrument {

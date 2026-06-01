@@ -50,6 +50,10 @@ export interface Exercise<TPayload = unknown> {
   name: string;
   levels: ReadonlyArray<{ n: string }>;
   usesDirection: boolean;
+  /** If true, the question does NOT auto-play on start and Replay is hidden
+   *  pre-answer (e.g. visual exercises where hearing the chord would give
+   *  away the answer). The chord is played on reveal via feedback.demoPlay. */
+  silentStart?: boolean;
 
   generate(opts: {
     levelIndex: number;

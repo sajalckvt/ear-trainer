@@ -308,31 +308,57 @@ export function HumanizeToggle({
   );
 }
 
-// ─── Dynamics control (manual soft/medium/hard) ───────────────────────────
+// ─── Dynamics control ─────────────────────────────────────────────────────
+// Dynamics vary automatically by default (more lifelike). The user can lock
+// to a fixed level if they want a consistent loudness.
 export type Dynamics = 'soft' | 'medium' | 'hard';
 
 export function DynamicsControl({
-  value,
-  onChange,
+  vary,
+  onVaryChange,
+  fixed,
+  onFixedChange,
 }: {
-  value: Dynamics;
-  onChange: (v: Dynamics) => void;
+  vary: boolean;
+  onVaryChange: (v: boolean) => void;
+  fixed: Dynamics;
+  onFixedChange: (v: Dynamics) => void;
 }) {
   return (
-    <div className="trow">
-      <span>Dynamics</span>
-      <div className="pg">
-        {(['soft', 'medium', 'hard'] as const).map((d) => (
-          <button
-            key={d}
-            className={`pill${value === d ? ' on' : ''}`}
-            onClick={() => onChange(d)}
-          >
-            {d === 'soft' ? 'pp' : d === 'medium' ? 'mf' : 'ff'}
-          </button>
-        ))}
+    <>
+      <div className="trow">
+        <span>
+          Vary dynamics
+          <span className="trow-sub"> · loudness changes note-to-note</span>
+        </span>
+        <span
+          role="switch"
+          aria-checked={vary}
+          tabIndex={0}
+          className={`tog${vary ? ' on' : ''}`}
+          onClick={() => onVaryChange(!vary)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') onVaryChange(!vary);
+          }}
+        />
       </div>
-    </div>
+      {!vary && (
+        <div className="trow">
+          <span>Fixed level</span>
+          <div className="pg">
+            {(['soft', 'medium', 'hard'] as const).map((d) => (
+              <button
+                key={d}
+                className={`pill${fixed === d ? ' on' : ''}`}
+                onClick={() => onFixedChange(d)}
+              >
+                {d === 'soft' ? 'pp' : d === 'medium' ? 'mf' : 'ff'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

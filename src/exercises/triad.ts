@@ -23,32 +23,8 @@ import { CHORDS, CH_LEVELS, SAMPLE_LO, SAMPLE_HI } from '../data/constants';
 import { pm, playPhrase, type InstrumentId } from '../audio/engine';
 import type { Exercise, AnswerOption, SongRefPlayable } from './types';
 
-interface ChordPayload { chordId: string; inversion?: number; }
+interface ChordPayload { chordId: string; }
 
-// Position labels for inversion drills (index = inversion number).
-const INVERSION_OPTS = [
-  { id: 'inv0', label: 'Root position', short: 'Root', color: '#22c55e' },
-  { id: 'inv1', label: '1st inversion', short: '1st',  color: '#3b82f6' },
-  { id: 'inv2', label: '2nd inversion', short: '2nd',  color: '#a855f7' },
-];
-
-/**
- * Voice a chord in a given inversion. Inversion n moves the lowest n
- * chord tones up an octave, so a different tone sits in the bass:
- *   0 = root position (root in bass)
- *   1 = first inversion (3rd in bass)
- *   2 = second inversion (5th in bass)
- * Notes are range-clamped to the soundfont afterwards.
- */
-function voiceInversion(rootMidi: number, intervals: number[], inv: number): number[] {
-  const notes = intervals.map((iv) => rootMidi + iv);
-  for (let i = 0; i < inv; i++) notes[i] += 12;
-  // Re-sort low-to-high and clamp into range.
-  let voiced = notes.slice().sort((a, b) => a - b);
-  while (Math.max(...voiced) > SAMPLE_HI) voiced = voiced.map((n) => n - 12);
-  while (Math.min(...voiced) < SAMPLE_LO) voiced = voiced.map((n) => n + 12);
-  return voiced;
-}
 
 function pick<T>(list: readonly T[], recent: ReadonlyArray<T>): T {
   let avail = list.slice() as T[];
@@ -166,27 +142,6 @@ export const triadExercise: Exercise<ChordPayload> = {
   generate({ levelIndex, keyOffset, recentPicks, spread }) {
     const lv = CH_LEVELS[levelIndex];
 
-    // ── Inversion drill: fixed quality, identify the position ──────────
-    if (lv.inv) {
-      const chId = lv.ch[0];
-      const ch = CHORDS.find((c) => c.id === chId)!;
-      const inversion = pick(lv.inv, recentPicks as number[]) as number;
-
-      let rm = 60 + keyOffset;
-      const topOffset = Math.max(...ch.iv) + 12; // allow headroom for the octave-bumped tone
-      while (rm + topOffset > SAMPLE_HI) rm -= 12;
-      while (rm < SAMPLE_LO) rm += 12;
-
-      const notes = voiceInversion(rm, ch.iv, inversion);
-      return {
-        root: rm,
-        notes,
-        payload: { chordId: chId, inversion },
-        pickId: `inv${inversion}`,
-        displayLabel: 'Which inversion?',
-      };
-    }
-
     const chId = pick(lv.ch, recentPicks as string[]);
     const ch = CHORDS.find((c) => c.id === chId)!;
 
@@ -205,12 +160,16 @@ export const triadExercise: Exercise<ChordPayload> = {
   play(q, instId: InstrumentId, opts) {
     const arpeggio = opts?.arpeggio ?? true;
     const humanize = opts?.humanize ?? false;
-    const base = opts?.dynamics ?? 1;
+    const base = opts?.dynamics ?? -1;
     // Play in ascending order so spread voicings still arpeggiate low-to-high
     const ordered = [...q.notes].sort((a, b) => a - b);
-    // Velocity = manual dynamics level, optionally jittered per-note when
-    // humanize is on so the chord sounds struck by hand, not mechanical.
-    const vel = () => base * (humanize ? 0.85 + Math.random() * 0.15 : 1);
+    // Velocity: when base < 0 the dynamics are 'varying' — each note gets a
+    // fresh velocity across a musical range (0.55..1.0) so playback stays
+    // lively. When locked, use the fixed base, with optional humanize jitter.
+    const vel = () =>
+      base < 0
+        ? 0.55 + Math.random() * 0.45
+        : base * (humanize ? 0.85 + Math.random() * 0.15 : 1);
 
     if (arpeggio) {
       const gap = 0.3;
@@ -224,23 +183,13 @@ export const triadExercise: Exercise<ChordPayload> = {
   },
 
   answers(levelIndex): AnswerOption[] {
-    const lv = CH_LEVELS[levelIndex];
-    if (lv.inv) {
-      return lv.inv.map((i) => {
-        const o = INVERSION_OPTS[i];
-        return { id: o.id, label: o.label, short: o.short, color: o.color };
-      });
-    }
-    return lv.ch.map((chId) => {
+    return CH_LEVELS[levelIndex].ch.map((chId) => {
       const ch = CHORDS.find((c) => c.id === chId)!;
       return { id: ch.id, label: ch.n, short: ch.sh, color: ch.co, hint: ch.fmd };
     });
   },
 
-  isCorrect(q, guess) {
-    if (q.payload.inversion != null) return guess === `inv${q.payload.inversion}`;
-    return guess === q.payload.chordId;
-  },
+  isCorrect(q, guess) { return guess === q.payload.chordId; },
 
   isClose(q, guess) {
     return CLOSE_PAIRS.has(`${q.payload.chordId}_${guess}`);
@@ -252,23 +201,6 @@ export const triadExercise: Exercise<ChordPayload> = {
   },
 
   feedback(answerId) {
-    // Inversion-drill answers are 'inv0'|'inv1'|'inv2'.
-    if (typeof answerId === 'string' && answerId.startsWith('inv')) {
-      const idx = Number(answerId.slice(3));
-      const o = INVERSION_OPTS[idx];
-      return {
-        label: o.label,
-        color: o.color,
-        demoPlay: (instId: InstrumentId) => {
-          // Reference: C major root position, then the same chord in this inversion.
-          const root = voiceInversion(60, [0, 4, 7], 0);
-          root.forEach((n) => pm(instId, n, 0));
-          const inv = voiceInversion(60, [0, 4, 7], idx);
-          const t = 1.0;
-          inv.forEach((n) => pm(instId, n, t));
-        },
-      };
-    }
     const ch = CHORDS.find((c) => c.id === (answerId as string))!;
     const songRefs: SongRefPlayable[] = ch.songs.map((s) => ({
       title: s.title,
