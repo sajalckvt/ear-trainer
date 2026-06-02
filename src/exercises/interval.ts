@@ -40,10 +40,36 @@ export const intervalExercise: Exercise<IntervalPayload> = {
   levels: IV_LEVELS,
   usesDirection: true,
 
-  generate({ levelIndex, keyOffset, direction, recentPicks }) {
+  generate({ levelIndex, keyOffset, direction, recentPicks, intervalMode, distanceDirection }) {
     const lv = IV_LEVELS[levelIndex];
     const st = pick(lv.iv, recentPicks as number[]);
 
+    // ── Free mode (former "Distance"): random absolute pitches, no key anchor.
+    if (intervalMode === 'free') {
+      const dir = distanceDirection ?? 'both';
+      const canAsc  = SAMPLE_HI - st >= SAMPLE_LO;
+      const canDesc = SAMPLE_HI >= SAMPLE_LO + st;
+      let useAsc: boolean;
+      if (dir === 'asc') useAsc = canAsc;
+      else if (dir === 'desc') useAsc = !canDesc;
+      else useAsc = canAsc && canDesc ? Math.random() < 0.5 : canAsc;
+
+      const randRange = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
+      let noteA: number, noteB: number;
+      if (useAsc && canAsc) { noteA = randRange(SAMPLE_LO, SAMPLE_HI - st); noteB = noteA + st; }
+      else if (canDesc) { noteA = randRange(SAMPLE_LO + st, SAMPLE_HI); noteB = noteA - st; }
+      else if (canAsc) { noteA = randRange(SAMPLE_LO, SAMPLE_HI - st); noteB = noteA + st; }
+      else { noteA = SAMPLE_LO; noteB = SAMPLE_HI; }
+
+      return {
+        root: Math.min(noteA, noteB),
+        notes: [noteA, noteB],
+        payload: { semitones: st, direction: useAsc ? 'asc' : 'desc' },
+        pickId: st,
+      };
+    }
+
+    // ── Anchored mode (classic intervals): fixed root in the chosen key.
     let rm = 60 + keyOffset;
     if (direction === 'asc') {
       if (rm + st > SAMPLE_HI) rm = SAMPLE_HI - st;

@@ -71,6 +71,9 @@ export interface Exercise<TPayload = unknown> {
     modeChordCount?: number;
     /** Fixed progression length override (1-7). undefined = use level default random range. */
     progressionLength?: number;
+    /** Interval exercise placement mode: 'anchored' (fixed root) or 'free'
+     *  (random absolute pitches, the former Distance mode). */
+    intervalMode?: 'anchored' | 'free';
   }): Question & { payload: TPayload; pickId: string | number };
 
   play(

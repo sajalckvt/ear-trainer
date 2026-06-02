@@ -93,6 +93,35 @@ export function LevelDirRow({
   );
 }
 
+// ─── Interval mode toggle (Anchored / Free) ───────────────────────────────
+export function IntervalModeToggle({
+  value,
+  onChange,
+}: {
+  value: 'anchored' | 'free';
+  onChange: (v: 'anchored' | 'free') => void;
+}) {
+  return (
+    <div className="trow">
+      <span>
+        Mode
+        <span className="trow-sub"> · {value === 'anchored' ? 'fixed root in key' : 'random pitches, no anchor'}</span>
+      </span>
+      <div className="pg">
+        {(['anchored', 'free'] as const).map((m) => (
+          <button
+            key={m}
+            className={`pill${value === m ? ' on' : ''}`}
+            onClick={() => onChange(m)}
+          >
+            {m === 'anchored' ? 'Anchored' : 'Free'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Distance direction toggle ────────────────────────────────────────────
 export function DistanceDirectionToggle({
   value,

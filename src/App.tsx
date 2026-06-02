@@ -21,12 +21,19 @@ export interface MistakeEntry {
 }
 
 /** Analyse the last N mistakes and return the top confusion pairs with advice. */
-export function analyzeMistakes(mistakes: MistakeEntry[]): { pair: string; count: number; tip: string }[] {
-  if (mistakes.length < 3) return [];
+export function analyzeMistakes(
+  mistakes: MistakeEntry[],
+  exerciseId: string,
+): { pair: string; count: number; tip: string }[] {
+  // Only analyse mistakes from the CURRENT exercise — confusion pairs from
+  // other exercises (e.g. chord-quality mix-ups) must never surface while
+  // the user is training something unrelated (e.g. interval distance).
+  const scoped = mistakes.filter((m) => m.exerciseId === exerciseId);
+  if (scoped.length < 3) return [];
 
   // Count confusion pairs: "guessed X, was Y"
   const counts: Record<string, number> = {};
-  for (const m of mistakes) {
+  for (const m of scoped) {
     if (m.guess === m.correct) continue;
     const key = `${m.guess}→${m.correct}`;
     counts[key] = (counts[key] ?? 0) + 1;
@@ -114,6 +121,8 @@ export default function App() {
   const [dynamics, setDynamics] = useState<'soft' | 'medium' | 'hard'>('medium');
   const [modeChordCount, setModeChordCount] = useState<number>(2);
   const [distanceDirection, setDistanceDirection] = useState<'asc' | 'desc' | 'both'>('both');
+  // Interval placement mode: anchored (fixed root) or free (random pitches).
+  const [intervalMode, setIntervalMode] = useState<'anchored' | 'free'>('anchored');
   const [instrument, setInstrument] = useState<InstrumentId>('acoustic_grand_piano');
   const [progressionLength, setProgressionLength] = useState<number | undefined>(undefined);
 
@@ -137,7 +146,7 @@ export default function App() {
   const { session, nextQuestion, replay, answer, resetScore, resetQuestion } = useQuizState({
     exercise: activeExercise, levelIndex, keyName, direction, distanceDirection,
     cadenceEnabled, spread, arpeggio, humanize, dynamics: dynamicsVel,
-    modeChordCount, instrument, progressionLength,
+    modeChordCount, instrument, progressionLength, intervalMode,
   });
 
   const { formatted: timerLabel, reset: resetTimer } = useTrainingTimer();
@@ -203,7 +212,7 @@ export default function App() {
     nextQuestion();
   }, [nextQuestion]);
 
-  const mistakeInsights = showInsights ? analyzeMistakes(mistakes) : [];
+  const mistakeInsights = showInsights ? analyzeMistakes(mistakes, exerciseId) : [];
 
   return (
     <div className="app">
@@ -264,6 +273,8 @@ export default function App() {
         onDynamicsChange={setDynamics}
         distanceDirection={distanceDirection}
         onDistanceDirectionChange={setDistanceDirection}
+        intervalMode={intervalMode}
+        onIntervalModeChange={setIntervalMode}
         modeChordCount={modeChordCount}
         onModeChordCountChange={setModeChordCount}
         progressionLength={progressionLength}
@@ -286,6 +297,7 @@ export default function App() {
         onResetScore={resetScore}
         onResetTimer={resetTimer}
         mistakeInsights={mistakeInsights}
+        onDismissInsights={() => setShowInsights(false)}
       />
 
       <ReferencePage

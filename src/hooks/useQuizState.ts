@@ -44,6 +44,7 @@ export interface UseQuizStateOptions {
   modeChordCount: number;
   instrument: InstrumentId;
   progressionLength?: number;
+  intervalMode?: 'anchored' | 'free';
 }
 
 export function useQuizState(opts: UseQuizStateOptions) {
@@ -82,6 +83,7 @@ export function useQuizState(opts: UseQuizStateOptions) {
       distanceDirection: opts.distanceDirection,
       modeChordCount: opts.modeChordCount,
       progressionLength: opts.progressionLength,
+      intervalMode: opts.intervalMode,
     });
     historyRef.current.push(q.pickId);
     if (historyRef.current.length > 10) historyRef.current.shift();
@@ -96,7 +98,7 @@ export function useQuizState(opts: UseQuizStateOptions) {
         opts.exercise.play(q, opts.instrument, { arpeggio: opts.arpeggio, humanize: opts.humanize, dynamics: opts.dynamics });
       });
     }
-  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.distanceDirection, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.humanize, opts.dynamics, opts.modeChordCount, opts.progressionLength, opts.instrument]);
+  }, [opts.exercise, opts.levelIndex, opts.keyName, opts.direction, opts.distanceDirection, opts.cadenceEnabled, opts.spread, opts.arpeggio, opts.humanize, opts.dynamics, opts.modeChordCount, opts.progressionLength, opts.instrument, opts.intervalMode]);
 
   const replay = useCallback(() => {
     if (!session.question) return;

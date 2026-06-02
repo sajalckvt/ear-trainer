@@ -4,7 +4,7 @@ import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
 import { pm, type InstrumentId } from '../audio/engine';
 import {
-  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, HumanizeToggle, DynamicsControl, type Dynamics, DistanceDirectionToggle, ModeChordCountToggle, ProgressionLengthToggle, InstrumentPicker,
+  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, HumanizeToggle, DynamicsControl, type Dynamics, DistanceDirectionToggle, IntervalModeToggle, ModeChordCountToggle, ProgressionLengthToggle, InstrumentPicker,
 } from '../components/Controls';
 import { ScoreBar } from '../components/ScoreBar';
 import { PlayArea } from '../components/PlayArea';
@@ -50,6 +50,8 @@ interface TrainPageProps {
   onDynamicsChange: (v: Dynamics) => void;
   distanceDirection: 'asc' | 'desc' | 'both';
   onDistanceDirectionChange: (v: 'asc' | 'desc' | 'both') => void;
+  intervalMode: 'anchored' | 'free';
+  onIntervalModeChange: (v: 'anchored' | 'free') => void;
   modeChordCount: number;
   onModeChordCountChange: (v: number) => void;
   progressionLength: number | undefined;
@@ -72,6 +74,7 @@ interface TrainPageProps {
   onResetScore: () => void;
   onResetTimer: () => void;
   mistakeInsights: { pair: string; count: number; tip: string }[];
+  onDismissInsights: () => void;
 }
 
 export function TrainPage(props: TrainPageProps) {
@@ -93,6 +96,8 @@ export function TrainPage(props: TrainPageProps) {
     timerLabel,
     onStart, onReplay, onNext, onGuess, onResetScore, onResetTimer,
     mistakeInsights,
+    onDismissInsights,
+    intervalMode, onIntervalModeChange,
   } = props;
 
   const [sheetDismissed, setSheetDismissed] = useState(false);
@@ -447,8 +452,11 @@ export function TrainPage(props: TrainPageProps) {
           if (spread) badges.push('spread');
           if (!arpeggio) badges.push('stacked');
         }
-        if (activeExercise.id === 'distance' && distanceDirection !== 'both')
-          badges.push(distanceDirection === 'asc' ? '↑ asc' : '↓ desc');
+        if (activeExercise.id === 'interval') {
+          badges.push(intervalMode === 'free' ? 'free' : 'anchored');
+          if (intervalMode === 'free' && distanceDirection !== 'both')
+            badges.push(distanceDirection === 'asc' ? '↑ asc' : '↓ desc');
+        }
         if (activeExercise.id === 'modeHarmony' && modeChordCount !== 2)
           badges.push(`${modeChordCount} chords`);
         if (activeExercise.id === 'progression' && progressionLength != null)
@@ -484,7 +492,10 @@ export function TrainPage(props: TrainPageProps) {
           {(activeExercise.id === 'triad' || activeExercise.id === 'spelling') && (
             <DynamicsControl vary={varyDynamics} onVaryChange={onVaryDynamicsChange} fixed={dynamics} onFixedChange={onDynamicsChange} />
           )}
-          {activeExercise.id === 'distance' && (
+          {activeExercise.id === 'interval' && (
+            <IntervalModeToggle value={intervalMode} onChange={onIntervalModeChange} />
+          )}
+          {activeExercise.id === 'interval' && intervalMode === 'free' && (
             <DistanceDirectionToggle value={distanceDirection} onChange={onDistanceDirectionChange} />
           )}
           {activeExercise.id === 'modeHarmony' && <ModeChordCountToggle value={modeChordCount} onChange={onModeChordCountChange} />}
@@ -512,8 +523,19 @@ export function TrainPage(props: TrainPageProps) {
           borderRadius: 9,
           fontSize: 11,
         }}>
-          <div style={{ color: '#f87171', fontWeight: 700, marginBottom: 5, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
-            📊 Pattern detected
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
+            <span style={{ color: '#f87171', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
+              📊 Pattern detected
+            </span>
+            <button
+              onClick={onDismissInsights}
+              aria-label="Dismiss"
+              style={{
+                marginLeft: 'auto', background: 'none', border: 'none',
+                color: '#777', cursor: 'pointer', fontSize: 14, lineHeight: 1,
+                padding: '0 2px',
+              }}
+            >×</button>
           </div>
           {mistakeInsights.map((ins) => (
             <div key={ins.pair} style={{ marginBottom: 4 }}>

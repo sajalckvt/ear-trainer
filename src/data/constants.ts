@@ -458,6 +458,8 @@ export const IV_LEVELS: IntervalLevel[] = [
   { n: 'Hard',     iv: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], cross: false },
   // Expert: second-octave intervals only — stretches the ear beyond P8
   { n: 'Expert',   iv: [12, 13, 14, 15, 16, 17], cross: true },
+  // Octave: near-octave discrimination (can you tell the exact octave?)
+  { n: 'Octave',   iv: [10, 11, 12, 13, 14], cross: false },
 ];
 
 export interface ChordLevel {
