@@ -65,17 +65,26 @@ export const GRIPS: Record<string, Grip[]> = {
     { name: 'Dm-shape', frets: [-1, -1, 3, 5, 6, 4], anchorString: 2, anchorFret: 3 },
   ],
   dim: [
-    // Diminished triad, top-4-string shape (example root A-string fret 3 = C dim: C Eb Gb)
-    // strings D-G-B = Eb(1) Gb(?) ... use a compact A-rooted triad voicing
-    { name: 'A-root', frets: [-1, 3, 4, 5, -1, -1], anchorString: 1, anchorFret: 3 },
-    // E-rooted diminished triad (example low-E fret 1 = F dim: F Ab Cb)
-    { name: 'E-root', frets: [1, 2, 3, -1, -1, -1], anchorString: 0, anchorFret: 1 },
+    // A-rooted dim triad (example C dim: C Eb Gb, root A-string fret 3).
+    // strings A D G B = C(0) Eb(m3) Gb(♭5) Eb — all three tones present.
+    { name: 'A-root', frets: [-1, 3, 4, 5, 4, -1], anchorString: 1, anchorFret: 3 },
+    // E-rooted dim triad (example F dim: F Ab Cb, root low-E fret 1).
+    // strings E A D G = F(0) Ab(m3) Cb=B(♭5) F — all three tones present.
+    { name: 'E-root', frets: [1, 2, 3, 1, -1, -1], anchorString: 0, anchorFret: 1 },
   ],
   aug: [
-    // Augmented triad (symmetrical). E-rooted, strings E-A-D (example F aug root fret 1)
-    { name: 'E-root', frets: [1, 0, 3, -1, -1, -1], anchorString: 0, anchorFret: 1 },
-    // A-rooted aug, strings A-D-G (example C aug root fret 3)
-    { name: 'A-root', frets: [-1, 3, 2, 5, -1, -1], anchorString: 1, anchorFret: 3 },
+    // A-rooted aug triad (example C aug: C E G#, root A-string fret 3).
+    // strings A D G B = C(0) E(M3) G#(#5) C — all three tones present.
+    { name: 'A-root', frets: [-1, 3, 6, 5, 5, -1], anchorString: 1, anchorFret: 3 },
+    // E-rooted aug triad (example F aug: F A C#, root low-E fret 1).
+    // strings E A D G = F(0) A(M3) C#(#5) F — all three tones present.
+    { name: 'E-root', frets: [1, 4, 3, 2, -1, -1], anchorString: 0, anchorFret: 1 },
+  ],
+  pwr: [
+    // E-shape power chord (example F5: F C, root low-E fret 1).
+    { name: 'E-root', frets: [1, 3, 3, -1, -1, -1], anchorString: 0, anchorFret: 1 },
+    // A-shape power chord (example C5: C G C, root A-string fret 3).
+    { name: 'A-root', frets: [-1, 3, 5, 5, -1, -1], anchorString: 1, anchorFret: 3 },
   ],
   sus2: [
     // Asus2-style (example C sus2, root A-string fret 3: C D G)
@@ -170,17 +179,42 @@ export function verifyGrips(
     for (const g of grips) {
       const rootPc =
         ((OPEN_STRING_MIDI[g.anchorString] + g.anchorFret) % 12 + 12) % 12;
+      const present = new Set<number>();
       g.frets.forEach((f, si) => {
         if (f < 0) return;
         const pc = ((OPEN_STRING_MIDI[si] + f) % 12 + 12) % 12;
         const interval = ((pc - rootPc) % 12 + 12) % 12;
+        present.add(interval);
         if (!allowed.has(interval)) {
           problems.push(
-            `${chordId} "${g.name}" string${si} fret${f}: interval ${interval} not in [${[...allowed].join(',')}]`,
+            `${chordId} "${g.name}" string${si} fret${f}: stray interval ${interval} not in [${[...allowed].join(',')}]`,
           );
         }
       });
+      // Completeness: every chord tone must appear at least once.
+      for (const iv of allowed) {
+        if (!present.has(iv)) {
+          problems.push(`${chordId} "${g.name}": MISSING chord tone (interval ${iv})`);
+        }
+      }
     }
   }
   return problems;
+}
+
+
+// ── Dev-only self-check ──────────────────────────────────────────────────
+// Runs once on import in dev builds; logs any invalid/incomplete grip so
+// authoring mistakes surface immediately instead of shipping silently.
+if (import.meta.env && import.meta.env.DEV) {
+  const DEV_INTERVALS: Record<string, number[]> = {
+    maj: [0, 4, 7], min: [0, 3, 7], dim: [0, 3, 6], aug: [0, 4, 8],
+    sus2: [0, 2, 7], sus4: [0, 5, 7], pwr: [0, 7],
+    maj7: [0, 4, 7, 11], min7: [0, 3, 7, 10], dom7: [0, 4, 7, 10],
+  };
+  const issues = verifyGrips(DEV_INTERVALS);
+  if (issues.length > 0) {
+    // eslint-disable-next-line no-console
+    console.error('[chordGrips] invalid grips:\n' + issues.join('\n'));
+  }
 }
