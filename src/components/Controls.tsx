@@ -7,13 +7,16 @@ export function NavTabs({
   screen,
   onChange,
 }: {
-  screen: 'train' | 'ref';
-  onChange: (s: 'train' | 'ref') => void;
+  screen: 'train' | 'songs' | 'ref';
+  onChange: (s: 'train' | 'songs' | 'ref') => void;
 }) {
   return (
     <div className="nav-row">
       <button className={`nb${screen === 'train' ? ' on' : ''}`} onClick={() => onChange('train')}>
         🎯 Train
+      </button>
+      <button className={`nb${screen === 'songs' ? ' on' : ''}`} onClick={() => onChange('songs')}>
+        🎵 Songs
       </button>
       <button className={`nb${screen === 'ref' ? ' on' : ''}`} onClick={() => onChange('ref')}>
         📚 Reference

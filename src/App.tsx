@@ -7,9 +7,10 @@ import { keyToOffset } from './audio/theory';
 import { NavTabs } from './components/Controls';
 import { TrainPage } from './pages/TrainPage';
 import { ReferencePage } from './pages/ReferencePage';
+import { SongQuizPage } from './pages/SongQuizPage';
 import { SAMPLE_LO, SAMPLE_HI, NN } from './data/constants';
 
-type Screen = 'train' | 'ref';
+type Screen = 'train' | 'songs' | 'ref';
 
 // ─── Mistake tracking ────────────────────────────────────────────────────────
 
@@ -304,6 +305,11 @@ export default function App() {
         visible={screen === 'ref'}
         instrument={instrument}
         onInstrumentChange={setInstrument}
+      />
+
+      <SongQuizPage
+        visible={screen === 'songs'}
+        instrument={instrument}
       />
     </div>
   );
