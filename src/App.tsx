@@ -8,9 +8,10 @@ import { NavTabs } from './components/Controls';
 import { TrainPage } from './pages/TrainPage';
 import { ReferencePage } from './pages/ReferencePage';
 import { SongQuizPage } from './pages/SongQuizPage';
+import { StudioPage } from './pages/StudioPage';
 import { SAMPLE_LO, SAMPLE_HI, NN } from './data/constants';
 
-type Screen = 'train' | 'songs' | 'ref';
+type Screen = 'train' | 'songs' | 'studio' | 'ref';
 
 // ─── Mistake tracking ────────────────────────────────────────────────────────
 
@@ -219,7 +220,6 @@ export default function App() {
     <div className="app">
       <div className="hdr">
         <h1>♪ Ear Trainer</h1>
-        <div className="sub">Intervals · Distance · Chords · Progressions · Modes · Scales</div>
       </div>
 
       <NavTabs screen={screen} onChange={setScreen} />
@@ -311,6 +311,8 @@ export default function App() {
         visible={screen === 'songs'}
         instrument={instrument}
       />
+
+      <StudioPage visible={screen === 'studio'} />
     </div>
   );
 }

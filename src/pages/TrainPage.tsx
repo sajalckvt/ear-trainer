@@ -625,47 +625,7 @@ export function TrainPage(props: TrainPageProps) {
         </>
       )}
 
-      <Roadmap activeId={activeExercise.id} />
     </div>
   );
 }
 
-function Roadmap({ activeId }: { activeId: string }) {
-  const phases = [
-    { id: 'interval',    n: 1, label: 'Intervals',    color: '#6366f1' },
-    { id: 'distance',    n: 2, label: 'Distance',     color: '#8b5cf6' },
-    { id: 'triad',       n: 3, label: 'Chords',       color: '#c084fc' },
-    { id: 'progression', n: 4, label: 'Progressions', color: '#e879f9' },
-    { id: 'modeHarmony', n: 5, label: 'Modes',        color: '#06b6d4' },
-    { id: 'scaleId',     n: 6, label: 'Scales',       color: '#10b981' },
-    { id: null,          n: 7, label: 'More soon',    color: null },
-  ];
-  return (
-    <div className="roadmap">
-      <span style={{ fontSize: 9, color: '#383848', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-        Roadmap
-      </span>
-      <br />
-      {phases.map((p, i) => {
-        const active = p.id === activeId;
-        const done = p.color !== null;
-        const bg = active ? p.color! : done ? '#1a1a2e' : '#16162e';
-        const textColor = active ? p.color! : done ? '#555' : '#383848';
-        const numColor = active ? '#fff' : done ? '#444' : '#383848';
-        return (
-          <span key={p.n}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, margin: i === 0 ? '4px 5px' : '0 5px' }}>
-              <span style={{
-                width: 18, height: 18, borderRadius: '50%', display: 'inline-flex',
-                alignItems: 'center', justifyContent: 'center',
-                background: bg, fontSize: 9, fontWeight: 700, color: numColor,
-              }}>{p.n}</span>
-              <span style={{ fontSize: 10, fontWeight: 600, color: textColor }}>{p.label}</span>
-            </span>
-            {i < phases.length - 1 && <span style={{ color: '#222' }}>→</span>}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
