@@ -994,3 +994,41 @@ body {
   font-size: 11px; cursor: pointer; vertical-align: middle;
 }
 .beat-pause:hover { background: #2e2e38; }
+
+/* ─── Train: scored-run banner (shared ConfigBar) ───────────────────────── */
+
+.train-run-banner {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 0 0 10px; padding: 10px 14px; border-radius: 10px;
+  background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.3);
+  font-size: 13px; font-weight: 700; color: #86efac;
+}
+
+/* ─── Studio: coaching tip + reference content ──────────────────────────── */
+
+.studio-tip {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: #d6c28a; padding: 0 4px 10px;
+}
+.studio-tip-ref {
+  background: none; border: 1px solid #3a3a46; border-radius: 6px;
+  padding: 2px 8px; cursor: pointer; font-size: 12px;
+}
+.studio-tip-ref:hover { background: #2e2e38; }
+
+.sref { text-align: left; }
+.sref-h2 { font-size: 17px; font-weight: 800; margin: 6px 0 14px; color: #e0e0f0; }
+.sref-h3 { font-size: 14px; font-weight: 700; margin: 22px 0 6px; color: #c7d2fe; }
+.sref-p { font-size: 12.5px; color: #aab; line-height: 1.55; margin: 6px 0; }
+.sref-ul { font-size: 12.5px; color: #aab; line-height: 1.55; margin: 6px 0 6px 18px; }
+.sref-ul li { margin-bottom: 7px; }
+.sref-table {
+  width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0;
+}
+.sref-table th {
+  text-align: left; color: #889; font-weight: 700; padding: 6px 8px;
+  border-bottom: 1px solid #2a2a4a; font-size: 10.5px; letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.sref-table td { padding: 6px 8px; border-bottom: 1px solid #1c1c33; color: #bbc; }
+.sref-table td:first-child { font-family: 'JetBrains Mono', monospace; white-space: nowrap; color: #ffe9c4; }

@@ -6,11 +6,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { ABLoopPlayer } from '../audioCore';
 import { ensureCtx } from '../../audio/engine';
-import { drumLoop } from '../loops';
+import { stageLoop } from '../loops';
 import { useStageGame, usePlayerTeardown } from '../useStageGame';
 import { GameShell, ABToggle } from '../GameShell';
 import { ChoicePanels } from '../widgets/ChoicePanels';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'gain-difference';
 
@@ -29,6 +30,7 @@ const round5 = (x: number) => Math.round(x * 2) / 2;
 export function GainDifference() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -38,9 +40,7 @@ export function GainDifference() {
   const correctRef = useRef(0);
   const [reveal, setReveal] = useState<{ correct: number; yours: number } | null>(null);
 
-  const ensurePlayer = useCallback(async (): Promise<ABLoopPlayer> => {
-    if (playerRef.current) return playerRef.current;
-    const buf = await drumLoop();
+  const ensurePlayer = useCallback((): ABLoopPlayer => {
     if (playerRef.current) return playerRef.current;
     const player = new ABLoopPlayer(2);
     player.passthrough(0); // before
@@ -50,12 +50,12 @@ export function GainDifference() {
     g.connect(player.chain(1).output);
     gainRef.current = g;
     playerRef.current = player;
-    player.start(buf);
     return player;
   }, []);
 
-  const onStage = useCallback(() => {
+  const onStage = useCallback((stage: number) => {
     setReveal(null);
+    setTip(null);
     setAb(0);
     // Real difference and a distractor `gap` dB away
     const sign = Math.random() < 0.5 ? -1 : 1;
@@ -68,7 +68,9 @@ export function GainDifference() {
     correctRef.current = correctIdx;
     setLabels(correctIdx === 0 ? [fmtDb(diff), fmtDb(other)] : [fmtDb(other), fmtDb(diff)]);
 
-    void ensurePlayer().then((p) => {
+    const p = ensurePlayer();
+    void stageLoop(stage).then((buf) => {
+      p.setBuffer(buf);
       if (gainRef.current) gainRef.current.gain.value = Math.pow(10, diff / 20);
       p.select(0);
     });
@@ -85,7 +87,11 @@ export function GainDifference() {
   const answer = (i: number) => {
     if (game.phase !== 'playing') return;
     setReveal({ correct: correctRef.current, yours: i });
-    game.submit(i === correctRef.current ? 1 : 0);
+    const res = game.submit(i === correctRef.current ? 1 : 0);
+    const picked = Math.abs(parseFloat(labels[i]));
+    const actual = Math.abs(parseFloat(labels[correctRef.current]));
+    setTip(coach(GAME_ID, res.missed,
+      { kind: 'confusion', tag: picked < actual ? 'smaller' : 'larger' }));
   };
 
   return (
@@ -95,6 +101,9 @@ export function GainDifference() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-dynamics"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="Gain Difference"
       instruction="Pick the gain change in dB"
       accent="#5b93b4"

@@ -14,6 +14,7 @@ import { useStageGame, usePlayerTeardown } from '../useStageGame';
 import { GameShell } from '../GameShell';
 import { Ruler, type RulerTick } from '../widgets/Ruler';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'stereo-width';
 
@@ -33,6 +34,7 @@ const posToWidth = (pos: number) => Math.min(0.98, Math.abs(pos * 2 - 1));
 export function StereoWidth() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -83,6 +85,7 @@ export function StereoWidth() {
 
   const onStage = useCallback(() => {
     setReveal(null);
+    setTip(null);
     ensurePlayer();
     const w = Math.round((0.1 + Math.random() * 0.85) * 100) / 100;
     targetRef.current = w;
@@ -99,7 +102,10 @@ export function StereoWidth() {
     // Show the correct width on the same side the user clicked
     const side = pos >= 0.5 ? 1 : -1;
     setReveal({ yours: pos, correct: 0.5 + (side * targetRef.current) / 2 });
-    game.submit(acc);
+    const res = game.submit(acc);
+    setTip(coach(GAME_ID, res.missed, {
+      kind: 'direction', axis: 'width', sign: guess > targetRef.current ? 1 : -1,
+    }));
   };
 
   return (
@@ -109,6 +115,9 @@ export function StereoWidth() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-space"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="Stereo Width"
       instruction="Estimate the stereo width"
       accent="#3f7d6d"

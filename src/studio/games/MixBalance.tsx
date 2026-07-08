@@ -12,6 +12,7 @@ import { linearAccuracy } from '../scoring';
 import { useStageGame, usePlayerTeardown } from '../useStageGame';
 import { GameShell, ABToggle } from '../GameShell';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'mix-balance';
 
@@ -41,6 +42,7 @@ const round5 = (x: number) => Math.round(x * 2) / 2;
 export function MixBalance() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
   const setIdx = stemSetForLevel(level);
   const stemNames = stemSetNames(setIdx);
@@ -89,6 +91,7 @@ export function MixBalance() {
 
   const onStage = useCallback(() => {
     setReveal(null);
+    setTip(null);
     setAb(0);
     const target = Array.from({ length: N }, () => round5(-15 + Math.random() * 15));
     targetRef.current = target;
@@ -121,7 +124,15 @@ export function MixBalance() {
   const confirm = () => {
     if (game.phase !== 'playing') return;
     setReveal(targetRef.current);
-    game.submit(mixAccuracy(faders, targetRef.current, cfg.zeroAtDb));
+    const res = game.submit(mixAccuracy(faders, targetRef.current, cfg.zeroAtDb));
+    let wi = 0;
+    faders.forEach((f, i) => {
+      if (Math.abs(f - targetRef.current[i]) > Math.abs(faders[wi] - targetRef.current[wi])) wi = i;
+    });
+    setTip(coach(GAME_ID, res.missed, {
+      kind: 'confusion',
+      tag: `stem:${stemNames[wi]}:${faders[wi] > targetRef.current[wi] ? 'high' : 'low'}`,
+    }));
   };
 
   return (
@@ -131,6 +142,8 @@ export function MixBalance() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-dynamics"
+      tip={tip}
       title="Mix Balance"
       instruction="Recreate the balance of the four stems"
       accent="#b3906f"

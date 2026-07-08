@@ -3,8 +3,10 @@ import { m2d } from '../audio/theory';
 import type { Exercise, Question, FeedbackInfo } from '../exercises/types';
 import type { Feedback, QuizPhase } from '../hooks/useQuizState';
 import { pm, type InstrumentId } from '../audio/engine';
+import { ConfigBar } from '../components/ConfigBar';
+import { getSettings } from '../studio/settings';
 import {
-  PhaseSelector, LevelDirRow, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, HumanizeToggle, DynamicsControl, type Dynamics, DistanceDirectionToggle, IntervalModeToggle, ModeChordCountToggle, ProgressionLengthToggle, InstrumentPicker,
+  PhaseSelector, KeyRow, CadenceToggle, SpreadToggle, ArpeggioToggle, HumanizeToggle, DynamicsControl, type Dynamics, DistanceDirectionToggle, IntervalModeToggle, ModeChordCountToggle, ProgressionLengthToggle, InstrumentPicker,
 } from '../components/Controls';
 import { ScoreBar } from '../components/ScoreBar';
 import { PlayArea } from '../components/PlayArea';
@@ -102,6 +104,23 @@ export function TrainPage(props: TrainPageProps) {
 
   const [sheetDismissed, setSheetDismissed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // ─── Shared ConfigBar state (same bar as the Studio games) ───────────────
+  // Run length: null = endless (Train default); a number = scored run of N.
+  const [runLength, setRunLength] = useState<number | null>(null);
+  const [trainPaused, setTrainPaused] = useState(false);
+
+  // Auto-next (global setting): advance shortly after an answer is judged.
+  const onNextRef = useRef(onNext);
+  onNextRef.current = onNext;
+  useEffect(() => {
+    if (quizPhase !== 'answered' || !feedback || trainPaused) return;
+    if (!getSettings().autoAdvance) return;
+    const t = setTimeout(() => onNextRef.current(), 1600);
+    return () => clearTimeout(t);
+  }, [quizPhase, feedback, trainPaused]);
+
+  const runDone = runLength !== null && total >= runLength;
 
   // ─── Audio playing state ──────────────────────────────────────────────────
   // quizPhase === 'playing' stays true until the user answers, which is much
@@ -436,11 +455,39 @@ export function TrainPage(props: TrainPageProps) {
       <PhaseSelector
         exercises={exercises} activeId={activeExercise.id} onChange={onExerciseChange}
       />
-      <LevelDirRow
-        levels={activeExercise.levels} levelIndex={levelIndex} onLevelChange={onLevelChange}
-        showDirection={activeExercise.usesDirection}
-        direction={direction} onDirectionChange={onDirectionChange}
+      <ConfigBar
+        levelLabels={activeExercise.levels.map((lv) => lv.n)}
+        levelIndex={levelIndex}
+        onLevel={onLevelChange}
+        stages={runLength ?? 0}
+        stageChoices={[0, 4, 6, 8, 12]}
+        onStages={(n) => setRunLength(n && n > 0 ? n : null)}
+        onRepeat={onReplay}
+        onPauseChange={setTrainPaused}
+        showScoring={false}
+        refAnchor="ref-top"
+        extras={activeExercise.usesDirection ? (
+          <div className="studio-levels">
+            <span className="studio-levels-label">DIR</span>
+            {(['asc', 'desc'] as const).map((d) => (
+              <button
+                key={d}
+                className={`studio-level-btn wide${direction === d ? ' on' : ''}`}
+                onClick={() => onDirectionChange(d)}
+              >
+                {d === 'asc' ? '↑ Asc' : '↓ Desc'}
+              </button>
+            ))}
+          </div>
+        ) : undefined}
       />
+
+      {runDone && (
+        <div className="train-run-banner">
+          Run done — {correct}/{total} correct.
+          <button className="studio-confirm" onClick={onResetScore}>New run</button>
+        </div>
+      )}
 
       {/* ── Settings (collapsed by default) ── */}
       {activeExercise.id !== 'melody' && (() => {

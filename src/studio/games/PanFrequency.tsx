@@ -12,6 +12,7 @@ import { useStageGame, usePlayerTeardown } from '../useStageGame';
 import { GameShell } from '../GameShell';
 import { Plane2D, type PlanePoint } from '../widgets/Plane2D';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'pan-frequency';
 
@@ -45,6 +46,7 @@ export const panFreqToPoint = (pan: number, freq: number): PlanePoint => ({
 export function PanFrequency() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -76,6 +78,7 @@ export function PanFrequency() {
 
   const onStage = useCallback(() => {
     setReveal(null);
+    setTip(null);
     ensurePlayer();
     const freq = Math.round(cfg.freqLo * Math.pow(cfg.freqHi / cfg.freqLo, Math.random()));
     const pan = Math.round((Math.random() * 1.8 - 0.9) * 100) / 100;
@@ -94,7 +97,10 @@ export function PanFrequency() {
       (linearAccuracy(pointToPan(p), t.pan, cfg.panZero) +
         freqAccuracy(pointToFreq(p), t.freq, cfg.freqZeroOct)) / 2;
     setReveal({ yours: p, correct: panFreqToPoint(t.pan, t.freq) });
-    game.submit(acc);
+    const res = game.submit(acc);
+    setTip(coach(GAME_ID, res.missed, {
+      kind: 'direction', axis: 'pan', sign: pointToPan(p) < t.pan ? -1 : 1,
+    }));
   };
 
   return (
@@ -104,6 +110,9 @@ export function PanFrequency() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-eq"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="Pan + Frequency"
       instruction="Find the pan position and the frequency"
       accent="#5d6a85"

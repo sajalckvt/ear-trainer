@@ -118,13 +118,15 @@ export function BeatCopy() {
     setPlayhead(-1);
   };
 
-  const onStage = useCallback(() => {
+  const onStage = useCallback((stage: number) => {
     setReveal(null);
     targetRef.current = generatePattern(cfg.lanes, cfg.maxActive);
     setYours(emptyPattern(cfg.lanes));
     setSecsLeft(timerSecs);
+    // the beat changes across stages: new pattern every stage, new tempo too
+    void ensureSeq().then((seq) => { seq.bpm = 88 + ((stage - 1) % 3) * 14; });
     playPattern('target');
-  }, [cfg.lanes, cfg.maxActive, timerSecs, playPattern]);
+  }, [cfg.lanes, cfg.maxActive, timerSecs, ensureSeq, playPattern]);
 
   const game = useStageGame({ gameId: GAME_ID, level, stages: stagesSel ?? cfg.stages, onStage });
 
@@ -212,6 +214,9 @@ export function BeatCopy() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-rhythm"
+      onRepeat={() => playPattern('target')}
+      onPauseChange={setPaused}
       title="Beat Copy"
       instruction="Listen to the beat, then program it on the grid"
       accent="#c98f4a"

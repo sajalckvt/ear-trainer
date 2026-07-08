@@ -7,11 +7,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ABLoopPlayer } from '../audioCore';
 import { ensureCtx } from '../../audio/engine';
-import { drumLoop } from '../loops';
+import { stageLoop } from '../loops';
 import { useStageGame, usePlayerTeardown } from '../useStageGame';
 import { GameShell, ABToggle } from '../GameShell';
 import { CompressorPanel, type CompCol } from '../widgets/CompressorPanel';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'compressor-copy';
 
@@ -41,6 +42,7 @@ interface StageState {
 export function CompressorCopy() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -52,9 +54,7 @@ export function CompressorCopy() {
   const [gr, setGr] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
-  const ensurePlayer = useCallback(async (): Promise<ABLoopPlayer> => {
-    if (playerRef.current) return playerRef.current;
-    const buf = await drumLoop();
+  const ensurePlayer = useCallback((): ABLoopPlayer => {
     if (playerRef.current) return playerRef.current;
     const player = new ABLoopPlayer(2);
     const ctx = ensureCtx();
@@ -74,7 +74,6 @@ export function CompressorCopy() {
     compsRef.current = comps as [DynamicsCompressorNode, DynamicsCompressorNode];
     makeupsRef.current = makeups as [GainNode, GainNode];
     playerRef.current = player;
-    player.start(buf);
     return player;
   }, []);
 
@@ -93,8 +92,9 @@ export function CompressorCopy() {
     applyComp(comps[1], u.ratio, u.attack, u.release);
   }, []);
 
-  const onStage = useCallback(() => {
+  const onStage = useCallback((stage: number) => {
     setRevealed(false);
+    setTip(null);
     setAb(0);
     setMakeup(6);
     const target = {
@@ -106,7 +106,9 @@ export function CompressorCopy() {
     const quiz = [...ALL_PARAMS].sort(() => Math.random() - 0.5).slice(0, cfg.quizCount);
     const s: StageState = { target, quiz, picked: { ratio: null, attack: null, release: null } };
     setSt(s);
-    void ensurePlayer().then((p) => {
+    const p = ensurePlayer();
+    void stageLoop(stage).then((buf) => {
+      p.setBuffer(buf);
       applyComp(compsRef.current![0], target.ratio, target.attack, target.release);
       applyUser(s);
       if (makeupsRef.current) makeupsRef.current[1].gain.value = Math.pow(10, 6 / 20);
@@ -155,7 +157,12 @@ export function CompressorCopy() {
     const acc =
       st.quiz.reduce((sum, p) => sum + (st.picked[p] === st.target[p] ? 1 : 0), 0) /
       st.quiz.length;
-    game.submit(acc);
+    const res = game.submit(acc);
+    const wrong = st.quiz.find((p) => st.picked[p] !== st.target[p]);
+    setTip(coach(GAME_ID, res.missed,
+      wrong === 'attack' || wrong === 'release'
+        ? { kind: 'confusion', tag: wrong }
+        : { kind: 'wrong' }));
   };
 
   const OPTION_LABELS: Record<Param, string[]> = {
@@ -185,6 +192,9 @@ export function CompressorCopy() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-dynamics"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="Compressor Copy"
       instruction="Restore the missing compressor setting"
       accent="#7a86b8"

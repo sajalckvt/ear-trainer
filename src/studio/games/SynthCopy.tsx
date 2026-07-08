@@ -245,6 +245,7 @@ export function SynthCopy() {
       maxLevel={6}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-synthesis"
       title="Synth Copy"
       instruction="Rebuild the synth patch by ear"
       accent="#6d8fb3"

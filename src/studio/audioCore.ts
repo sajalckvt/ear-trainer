@@ -100,14 +100,34 @@ export class ABLoopPlayer {
     this.chains[i].pre.connect(this.chains[i].post);
   }
 
+  private buffer: AudioBuffer | null = null;
+
   start(buffer: AudioBuffer): void {
     if (this.started) return;
+    this.setBuffer(buffer);
+  }
+
+  /**
+   * Swap the looping source to a new buffer (per-stage beat/instrument
+   * rotation). Restarts the loop from the top; also used by `restart()`.
+   */
+  setBuffer(buffer: AudioBuffer): void {
+    if (this.src) {
+      try { this.src.stop(); } catch { /* already stopped */ }
+      this.src.disconnect();
+    }
+    this.buffer = buffer;
     this.src = this.ctx.createBufferSource();
     this.src.buffer = buffer;
     this.src.loop = true;
     for (const c of this.chains) this.src.connect(c.pre);
     this.src.start();
     this.started = true;
+  }
+
+  /** Replay the current loop from the beginning (the 🔁 transport button). */
+  restart(): void {
+    if (this.buffer) this.setBuffer(this.buffer);
   }
 
   /**

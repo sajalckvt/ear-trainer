@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NN, ND, IVS, CHORDS, INSTS } from '../data/constants';
 import { PROGRESSION_CHORDS } from '../data/progressions';
 import { pn, pm, type InstrumentId } from '../audio/engine';
 import { m2n, m2d } from '../audio/theory';
 import { InstrumentPicker } from '../components/Controls';
+import { StudioReference } from '../components/StudioReference';
 
 interface ReferencePageProps {
   visible: boolean;
@@ -11,7 +12,7 @@ interface ReferencePageProps {
   onInstrumentChange: (id: InstrumentId) => void;
 }
 
-type RefSection = 'notes' | 'intervals' | 'chords' | 'modes' | 'inversions';
+type RefSection = 'notes' | 'intervals' | 'chords' | 'modes' | 'inversions' | 'studio';
 
 const SECTIONS: ReadonlyArray<{ id: RefSection; label: string }> = [
   { id: 'notes',     label: 'Notes' },
@@ -19,10 +20,27 @@ const SECTIONS: ReadonlyArray<{ id: RefSection; label: string }> = [
   { id: 'chords',    label: 'Chords' },
   { id: 'inversions', label: 'Inversions' },
   { id: 'modes',     label: 'Modes' },
+  { id: 'studio',    label: 'Studio' },
 ];
 
 export function ReferencePage({ visible, instrument, onInstrumentChange }: ReferencePageProps) {
   const [section, setSection] = useState<RefSection>('notes');
+
+  // The games' book buttons jump here: switch to the Studio section and
+  // scroll to the requested anchor once it exists in the DOM.
+  useEffect(() => {
+    const h = (e: Event) => {
+      const anchor = (e as CustomEvent<string>).detail;
+      if (!anchor || anchor === 'ref-top') return;
+      setSection('studio');
+      setTimeout(
+        () => document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+        120,
+      );
+    };
+    window.addEventListener('et-goto-ref', h);
+    return () => window.removeEventListener('et-goto-ref', h);
+  }, []);
 
   return (
     <div className={`screen${visible ? ' vis' : ''}`}>
@@ -51,6 +69,7 @@ export function ReferencePage({ visible, instrument, onInstrumentChange }: Refer
       {section === 'chords'    && <ChordsSection    instrument={instrument} />}
       {section === 'inversions' && <InversionsSection instrument={instrument} />}
       {section === 'modes'     && <ModesSection     instrument={instrument} />}
+      {section === 'studio'    && <StudioReference />}
     </div>
   );
 }

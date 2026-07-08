@@ -11,6 +11,7 @@ import { useStageGame } from '../useStageGame';
 import { GameShell } from '../GameShell';
 import { Ruler, type RulerTick } from '../widgets/Ruler';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'pan-position';
 
@@ -36,6 +37,7 @@ const panToPos = (pan: number) => (pan + 1) / 2;
 export function PanPosition() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -52,6 +54,7 @@ export function PanPosition() {
 
   const onStage = useCallback(() => {
     setReveal(null);
+    setTip(null);
     if (!playerRef.current) {
       const player = new ABLoopPlayer(1, 0.18);
       const ctx = ensureCtx();
@@ -81,7 +84,10 @@ export function PanPosition() {
     const guess = posToPan(pos);
     const acc = linearAccuracy(guess, targetRef.current, cfg.zeroAtDistance);
     setReveal({ yours: pos, correct: panToPos(targetRef.current) });
-    game.submit(acc);
+    const res = game.submit(acc);
+    setTip(coach(GAME_ID, res.missed, {
+      kind: 'direction', axis: 'pan', sign: guess < targetRef.current ? -1 : 1,
+    }));
   };
 
   return (
@@ -91,6 +97,9 @@ export function PanPosition() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-space"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="Pan Position"
       instruction="Where is the sound panned?"
       accent="#a3c293"

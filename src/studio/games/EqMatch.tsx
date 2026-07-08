@@ -11,6 +11,7 @@ import { GameShell } from '../GameShell';
 import { ChoicePanels } from '../widgets/ChoicePanels';
 import { EqCurve } from '../widgets/EqCurve';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'eq-match';
 
@@ -31,6 +32,7 @@ const randFreq = () => 150 * Math.pow(8000 / 150, Math.random());
 export function EqMatch() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -60,6 +62,7 @@ export function EqMatch() {
 
   const onStage = useCallback(() => {
     setReveal(null);
+    setTip(null);
     const freq = randFreq();
     const gainDb = cfg.allowCut && Math.random() < 0.4 ? -cfg.gainDb : cfg.gainDb;
     const match = Math.random() < 0.5 ? 0 : 1;
@@ -102,7 +105,8 @@ export function EqMatch() {
   const answer = (i: number) => {
     if (game.phase !== 'playing') return;
     setReveal({ correct: correctRef.current, yours: i });
-    game.submit(i === correctRef.current ? 1 : 0);
+    const res = game.submit(i === correctRef.current ? 1 : 0);
+    setTip(coach(GAME_ID, res.missed, { kind: 'wrong' }));
   };
 
   return (
@@ -112,6 +116,9 @@ export function EqMatch() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-eq"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="EQ Match"
       instruction="Pick the sound that matches the EQ curve"
       accent="#9b8bb4"

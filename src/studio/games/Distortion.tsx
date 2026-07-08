@@ -6,11 +6,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { ABLoopPlayer } from '../audioCore';
 import { ensureCtx } from '../../audio/engine';
-import { synthLoop } from '../loops';
+import { stageLoop } from '../loops';
 import { useStageGame, usePlayerTeardown } from '../useStageGame';
 import { GameShell } from '../GameShell';
 import { ChoicePanels } from '../widgets/ChoicePanels';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'distortion';
 
@@ -36,6 +37,7 @@ const IDENTITY = shaperCurve(0);
 export function Distortion() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -45,9 +47,7 @@ export function Distortion() {
   const [activePlay, setActivePlay] = useState(0);
   const [reveal, setReveal] = useState<{ correct: number; yours: number } | null>(null);
 
-  const ensurePlayer = useCallback(async (): Promise<ABLoopPlayer> => {
-    if (playerRef.current) return playerRef.current;
-    const buf = await synthLoop();
+  const ensurePlayer = useCallback((): ABLoopPlayer => {
     if (playerRef.current) return playerRef.current;
     const player = new ABLoopPlayer(2);
     const ctx = ensureCtx();
@@ -65,15 +65,17 @@ export function Distortion() {
     shapersRef.current = shapers as [WaveShaperNode, WaveShaperNode];
     trimsRef.current = trims as [GainNode, GainNode];
     playerRef.current = player;
-    player.start(buf);
     return player;
   }, []);
 
-  const onStage = useCallback(() => {
+  const onStage = useCallback((stage: number) => {
     setReveal(null);
+    setTip(null);
     const distorted = Math.random() < 0.5 ? 0 : 1;
     correctRef.current = distorted;
-    void ensurePlayer().then((p) => {
+    const p = ensurePlayer();
+    void stageLoop(stage).then((buf) => {
+      p.setBuffer(buf);
       const shapers = shapersRef.current!;
       const trims = trimsRef.current!;
       for (let i = 0; i < 2; i++) {
@@ -97,7 +99,8 @@ export function Distortion() {
   const answer = (i: number) => {
     if (game.phase !== 'playing') return;
     setReveal({ correct: correctRef.current, yours: i });
-    game.submit(i === correctRef.current ? 1 : 0);
+    const res = game.submit(i === correctRef.current ? 1 : 0);
+    setTip(coach(GAME_ID, res.missed, { kind: 'wrong' }));
   };
 
   return (
@@ -107,6 +110,9 @@ export function Distortion() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-synthesis"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="Distortion"
       instruction="Pick the more distorted sound"
       accent="#c0524d"

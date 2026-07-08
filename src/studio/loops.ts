@@ -122,6 +122,30 @@ export function synthLoop(): Promise<AudioBuffer> {
   return synthP;
 }
 
+let mixP: Promise<AudioBuffer> | null = null;
+
+/** Drums + bass together — the third stage flavor. */
+export function mixLoop(): Promise<AudioBuffer> {
+  if (!mixP) {
+    mixP = renderOffline(LEN, (o) => {
+      buildKick(o, 0); buildKick(o, 1);
+      buildSnare(o, 0.5); buildSnare(o, 1.5);
+      for (let i = 0; i < 8; i++) buildHat(o, i * 0.25);
+      for (const [t, hz] of BASS_NOTES) buildBassNote(o, t, hz);
+    });
+  }
+  return mixP;
+}
+
+/**
+ * Per-stage source rotation for the loop-based games: the beat/instrument
+ * changes every stage (drums → synth bass → full mix → …).
+ */
+export function stageLoop(stage: number): Promise<AudioBuffer> {
+  const pick = [drumLoop, synthLoop, mixLoop][(stage - 1) % 3];
+  return pick();
+}
+
 // ─── Extra instrument builders (Mix Balance stem sets) ──────────────────────
 
 /** Sustained detuned-saw pad chord through a slow lowpass. */

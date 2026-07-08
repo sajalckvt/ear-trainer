@@ -26,18 +26,39 @@ let soundfontPromise: Promise<SoundfontData> | null = null;
 const BC: Record<string, AudioBuffer> = {};
 
 // ─── Context management ────────────────────────────────────────────────────
+
+// Global user-facing pause: while set, nothing auto-resumes the context —
+// neither ensureCtx nor the gesture-unlock handlers.
+let userPaused = false;
+
+/** Pause/resume ALL app audio (Train + Studio). */
+export function setAudioPaused(paused: boolean): void {
+  userPaused = paused;
+  if (!ctx) return;
+  if (paused) {
+    ctx.suspend().catch(() => {});
+  } else {
+    ctx.resume().catch(() => {});
+  }
+}
+
+export function isAudioPaused(): boolean {
+  return userPaused;
+}
+
 export function ensureCtx(): AudioContext {
   if (!ctx) {
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     ctx = new AC();
   }
-  if (ctx.state === 'suspended') {
+  if (ctx.state === 'suspended' && !userPaused) {
     ctx.resume().catch(() => {});
   }
   return ctx;
 }
 
 function initAudioOnGesture(): void {
+  if (userPaused) return;
   const a = ensureCtx();
   try {
     const osc = a.createOscillator();

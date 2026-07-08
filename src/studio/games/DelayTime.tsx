@@ -6,11 +6,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { ABLoopPlayer } from '../audioCore';
 import { ensureCtx } from '../../audio/engine';
-import { drumLoop } from '../loops';
+import { stageLoop } from '../loops';
 import { useStageGame, usePlayerTeardown } from '../useStageGame';
 import { GameShell, ABToggle } from '../GameShell';
 import { ChoicePanels } from '../widgets/ChoicePanels';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'delay-time';
 
@@ -26,6 +27,7 @@ function levelCfg(level: number) {
 export function DelayTime() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -35,9 +37,7 @@ export function DelayTime() {
   const correctRef = useRef(0);
   const [reveal, setReveal] = useState<{ correct: number; yours: number } | null>(null);
 
-  const ensurePlayer = useCallback(async (): Promise<ABLoopPlayer> => {
-    if (playerRef.current) return playerRef.current;
-    const buf = await drumLoop();
+  const ensurePlayer = useCallback((): ABLoopPlayer => {
     if (playerRef.current) return playerRef.current;
     const player = new ABLoopPlayer(2);
     player.passthrough(0); // no delay
@@ -52,12 +52,12 @@ export function DelayTime() {
     echo.connect(output);
     delayRef.current = d;
     playerRef.current = player;
-    player.start(buf);
     return player;
   }, []);
 
-  const onStage = useCallback(() => {
+  const onStage = useCallback((stage: number) => {
     setReveal(null);
+    setTip(null);
     setAb(1);
     const ci = Math.floor(Math.random() * DELAYS.length);
     const dirs = [ci - cfg.idxGap, ci + cfg.idxGap].filter((j) => j >= 0 && j < DELAYS.length);
@@ -67,7 +67,9 @@ export function DelayTime() {
     const lbl = (i: number) => `${DELAYS[i]} ms`;
     setLabels(correctIdx === 0 ? [lbl(ci), lbl(oi)] : [lbl(oi), lbl(ci)]);
 
-    void ensurePlayer().then((p) => {
+    const p = ensurePlayer();
+    void stageLoop(stage).then((buf) => {
+      p.setBuffer(buf);
       if (delayRef.current) delayRef.current.delayTime.value = DELAYS[ci] / 1000;
       p.select(1);
     });
@@ -84,7 +86,11 @@ export function DelayTime() {
   const answer = (i: number) => {
     if (game.phase !== 'playing') return;
     setReveal({ correct: correctRef.current, yours: i });
-    game.submit(i === correctRef.current ? 1 : 0);
+    const res = game.submit(i === correctRef.current ? 1 : 0);
+    const picked = parseInt(labels[i], 10);
+    const actual = parseInt(labels[correctRef.current], 10);
+    setTip(coach(GAME_ID, res.missed,
+      { kind: 'confusion', tag: picked < actual ? 'shorter' : 'longer' }));
   };
 
   return (
@@ -94,6 +100,9 @@ export function DelayTime() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-time"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="Delay Time"
       instruction="Pick the delay time"
       accent="#e8b48d"

@@ -1,20 +1,16 @@
 /**
  * GameShell — the shared frame for studio games:
- * fixed config bar on top (LEVEL / STAGES / game extras / AUTO / STRICT),
- * score + stage header, intro splash, reveal banner, green/red flash, and
- * the run-complete screen. No lives — misses cost points, never the run.
+ * the app-wide ConfigBar on top (level / transport / run settings), score +
+ * stage header, intro splash, reveal banner, green/red flash, and the
+ * run-complete screen. No lives — misses cost points, never the run.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { StageGame } from './useStageGame';
-import { getSettings, setSettings, type Strictness } from './settings';
+import { ConfigBar, gotoReference } from '../components/ConfigBar';
+import { getSettings } from './settings';
 
 const STAGE_CHOICES = [4, 6, 8, 12];
-const STRICTNESS_LABELS: { id: Strictness; label: string }[] = [
-  { id: 'loose', label: 'Forgiving' },
-  { id: 'normal', label: 'Standard' },
-  { id: 'strict', label: 'Precise' },
-];
 
 export function GameShell({
   game,
@@ -27,7 +23,11 @@ export function GameShell({
   maxLevel = 8,
   onLevel,
   onStages,
+  onRepeat,
+  onPauseChange,
   topExtras,
+  refAnchor,
+  tip,
 }: {
   game: StageGame;
   title: string;
@@ -45,25 +45,35 @@ export function GameShell({
   onLevel?: (level: number) => void;
   /** Run-length override — null restores the level's default. */
   onStages?: (stages: number | null) => void;
+  /** Replay the current stage's audio from the top (🔁). */
+  onRepeat?: () => void;
+  /** Observe global pause (freeze game-side timers). */
+  onPauseChange?: (paused: boolean) => void;
   /** Game-specific config pills (e.g. Beat Copy's timer). */
   topExtras?: ReactNode;
+  /** Reference-tab anchor for the 📖 theory button. */
+  refAnchor?: string;
+  /** Coaching tip for the current reveal (from studio/coaching). */
+  tip?: string | null;
 }) {
   const { phase, stage, stages, score, lastResult } = game;
 
-  const [settings, setSettingsState] = useState(getSettings);
-  const [cfgOpen, setCfgOpen] = useState(false);
-  const changeSettings = (patch: Parameters<typeof setSettings>[0]) =>
-    setSettingsState(setSettings(patch));
+  const [paused, setPaused] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(() => getSettings().autoAdvance);
 
-  // Auto-advance from reveal after a beat (when enabled). `game` gets a
-  // fresh identity every parent render, so depend on phase only.
+  // Auto-advance from reveal after a beat (when enabled and not paused).
+  // `game` gets a fresh identity every parent render, so depend on phase only.
   const nextRef = useRef(game.next);
   nextRef.current = game.next;
   useEffect(() => {
-    if (phase !== 'reveal' || !settings.autoAdvance) return;
+    // Re-read the setting each reveal — it can be flipped in the ConfigBar.
+    if (phase === 'reveal') setAutoAdvance(getSettings().autoAdvance);
+  }, [phase]);
+  useEffect(() => {
+    if (phase !== 'reveal' || !autoAdvance || paused) return;
     const t = setTimeout(() => nextRef.current(), 1400);
     return () => clearTimeout(t);
-  }, [phase, settings.autoAdvance]);
+  }, [phase, autoAdvance, paused]);
 
   // Changing level or run length mid-run restarts the run with the new
   // config (the effect runs after the parent re-rendered with it). A level
@@ -95,71 +105,23 @@ export function GameShell({
   return (
     <div className="studio-game" style={{ ['--studio-accent' as string]: accent }}>
       <div className="studio-frame">
-        <div className="studio-topbar">
-          <div className="studio-topbar-main">
-            {level !== undefined && onLevel && (
-              <div className="studio-levels">
-                <span className="studio-levels-label">LEVEL</span>
-                {Array.from({ length: maxLevel }, (_, i) => (
-                  <button
-                    key={i}
-                    className={`studio-level-btn${level === i + 1 ? ' on' : ''}`}
-                    onClick={() => onLevel(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            )}
-            <button
-              className={`studio-gear${cfgOpen ? ' on' : ''}`}
-              onClick={() => setCfgOpen((o) => !o)}
-              aria-label="Run settings"
-              title="Run settings"
-            >
-              ⚙
-            </button>
-          </div>
-          {cfgOpen && (
-            <div className="studio-config-row">
-              {onStages && (
-                <div className="studio-levels">
-                  <span className="studio-levels-label">STAGES</span>
-                  {STAGE_CHOICES.map((n) => (
-                    <button
-                      key={n}
-                      className={`studio-level-btn${stages === n ? ' on' : ''}`}
-                      onClick={() => onStages(n)}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {topExtras}
-              <div className="studio-levels">
-                <span className="studio-levels-label">SCORING</span>
-                {STRICTNESS_LABELS.map((s) => (
-                  <button
-                    key={s.id}
-                    className={`studio-level-btn wide${settings.strictness === s.id ? ' on' : ''}`}
-                    onClick={() => changeSettings({ strictness: s.id })}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              <label className="studio-autonext">
-                <input
-                  type="checkbox"
-                  checked={settings.autoAdvance}
-                  onChange={(e) => changeSettings({ autoAdvance: e.target.checked })}
-                />
-                auto next
-              </label>
-            </div>
-          )}
-        </div>
+        {level !== undefined && onLevel && (
+          <ConfigBar
+            levelLabels={Array.from({ length: maxLevel }, (_, i) => `${i + 1}`)}
+            levelIndex={level - 1}
+            onLevel={(i) => onLevel(i + 1)}
+            stages={onStages ? stages : undefined}
+            stageChoices={STAGE_CHOICES}
+            onStages={onStages}
+            onRepeat={onRepeat}
+            onPauseChange={(p) => {
+              setPaused(p);
+              onPauseChange?.(p);
+            }}
+            extras={topExtras}
+            refAnchor={refAnchor}
+          />
+        )}
 
         <div className="studio-hdr">
           <div className="studio-hdr-cell">
@@ -186,15 +148,27 @@ export function GameShell({
         {(phase === 'playing' || phase === 'reveal') && (
           <div className={`studio-stage-area ${flash}`}>
             {phase === 'reveal' && lastResult && (
-              <div className="studio-result">
-                <span>
-                  {lastResult.missed ? 'Missed' : 'Accurate'} · {Math.round(lastResult.accuracy * 100)}% · +{lastResult.points}
-                  {lastResult.bonus > 0 && <span> · Bonus +{lastResult.bonus}</span>}
-                </span>
-                {!settings.autoAdvance && (
-                  <button className="studio-confirm" onClick={game.next}>Continue ›</button>
+              <>
+                <div className="studio-result">
+                  <span>
+                    {lastResult.missed ? 'Missed' : 'Accurate'} · {Math.round(lastResult.accuracy * 100)}% · +{lastResult.points}
+                    {lastResult.bonus > 0 && <span> · Bonus +{lastResult.bonus}</span>}
+                  </span>
+                  {!autoAdvance && (
+                    <button className="studio-confirm" onClick={game.next}>Continue ›</button>
+                  )}
+                </div>
+                {tip && (
+                  <div className="studio-tip">
+                    💡 {tip}
+                    {refAnchor && (
+                      <button className="studio-tip-ref" onClick={() => gotoReference(refAnchor)}>
+                        📖
+                      </button>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
             {children}
             {controls && <div className="studio-controls-row">{controls}</div>}

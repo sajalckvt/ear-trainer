@@ -12,6 +12,7 @@ import { useStageGame, usePlayerTeardown } from '../useStageGame';
 import { GameShell, ABToggle } from '../GameShell';
 import { EqEditor, type EqValue } from '../widgets/EqEditor';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'eq-copy';
 
@@ -65,6 +66,7 @@ const logUniform = (lo: number, hi: number) => lo * Math.pow(hi / lo, Math.rando
 export function EqCopy() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -103,6 +105,7 @@ export function EqCopy() {
 
   const onStage = useCallback((stage: number) => {
     setReveal(null);
+    setTip(null);
     setAb(0);
     const s = stageSpec(stage);
     setSpec(s);
@@ -143,7 +146,12 @@ export function EqCopy() {
     if (game.phase !== 'playing') return;
     const acc = eqCopyAccuracy(value, targetRef.current, spec, cfg.freqZeroOct, cfg.gainZeroDb);
     setReveal(targetRef.current);
-    game.submit(acc);
+    const res = game.submit(acc);
+    const freqPart = freqAccuracy(value.freq, targetRef.current.freq, cfg.freqZeroOct);
+    const gainOk = !spec.adjustGain ||
+      linearAccuracy(value.gainDb, targetRef.current.gainDb, cfg.gainZeroDb) > 0.7;
+    setTip(coach(GAME_ID, res.missed,
+      freqPart < 0.5 && gainOk ? { kind: 'confusion', tag: 'freq-off' } : undefined));
   };
 
   return (
@@ -153,6 +161,9 @@ export function EqCopy() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-eq"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="EQ Copy"
       instruction="Set the EQ to recreate the sound"
       accent="#7bbfb7"

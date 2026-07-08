@@ -110,6 +110,14 @@ export default function App() {
   }, []);
 
   const [screen, setScreen] = useState<Screen>('train');
+
+  // 📖 buttons anywhere in the app jump to the Reference tab; the
+  // ReferencePage itself handles picking the section and scrolling.
+  useEffect(() => {
+    const h = () => setScreen('ref');
+    window.addEventListener('et-goto-ref', h);
+    return () => window.removeEventListener('et-goto-ref', h);
+  }, []);
   const [exerciseId, setExerciseId] = useState<string>('interval');
   const [levelIndex, setLevelIndex] = useState<number>(0);
   const [direction, setDirection] = useState<'asc' | 'desc'>('asc');

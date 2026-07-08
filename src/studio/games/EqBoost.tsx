@@ -12,6 +12,7 @@ import { useStageGame } from '../useStageGame';
 import { GameShell, ABToggle } from '../GameShell';
 import { Ruler, type RulerTick } from '../widgets/Ruler';
 import { getProgress } from '../progress';
+import { coach } from '../coaching';
 
 const GAME_ID = 'eq-boost';
 
@@ -46,6 +47,7 @@ const TICKS: RulerTick[] = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 2000
 export function EqBoost() {
   const [level, setLevel] = useState(() => getProgress(GAME_ID).level);
   const [stagesSel, setStagesSel] = useState<number | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
   const cfg = levelCfg(level);
 
   const playerRef = useRef<ABLoopPlayer | null>(null);
@@ -73,6 +75,7 @@ export function EqBoost() {
 
   const onStage = useCallback(() => {
     setReveal(null);
+    setTip(null);
     // Build the player lazily inside the user gesture (audio unlock).
     if (!playerRef.current) {
       const player = new ABLoopPlayer(2);
@@ -113,7 +116,10 @@ export function EqBoost() {
     const guessHz = posToFreq(pos);
     const acc = freqAccuracy(guessHz, targetRef.current, cfg.zeroAtOctaves);
     setReveal({ yours: pos, correct: freqToPos(targetRef.current) });
-    game.submit(acc);
+    const res = game.submit(acc);
+    setTip(coach(GAME_ID, res.missed, {
+      kind: 'direction', axis: 'freq', sign: guessHz < targetRef.current ? -1 : 1,
+    }));
   };
 
   return (
@@ -123,6 +129,9 @@ export function EqBoost() {
       maxLevel={8}
       onLevel={setLevel}
       onStages={setStagesSel}
+      refAnchor="ref-eq"
+      tip={tip}
+      onRepeat={() => playerRef.current?.restart()}
       title="EQ Boost"
       instruction="Find the boosted (or cut) frequency"
       accent="#8fc7bf"
